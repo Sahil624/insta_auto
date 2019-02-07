@@ -1,0 +1,54 @@
+from django.db import models
+from django.contrib.auth.models import User
+
+
+# Create your models here.
+class User(User):
+    tags = models.ManyToManyField("Tag", blank=True)
+    configuration = models.ForeignKey("Configuration",
+                                      verbose_name="config",
+                                      on_delete=models.CASCADE
+                                      )
+
+    def __str__(self):
+        return self.username
+
+
+class Tag(models.Model):
+    tag = models.CharField(max_length=100)
+
+    def __str__(self):
+        return '#' + self.tag
+
+
+class Configuration(models.Model):
+    name = models.CharField(max_length=50)
+    likes_per_day = models.IntegerField(default=709)
+    comment_per_day = models.IntegerField(default=31)
+    max_like_for_one_tag = models.IntegerField(default=36)
+    follow_per_day = models.IntegerField(default=360)
+    follow_time = models.IntegerField(default=3600)
+    unfollow_per_day = models.IntegerField(default=297)
+    unfollow_break_max = models.IntegerField(default=17)
+    unfollow_break_min = models.IntegerField(default=3)
+    log_mod = models.IntegerField(default=0)
+    proxy = models.CharField(max_length=50, default="", blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Session(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    session_string = models.CharField(max_length=10000)
+
+
+class InstaAccount(models.Model):
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             related_name='insta_account')
+    insta_user_id = models.IntegerField(blank=True, null=True)
+    last_csrf_token = models.CharField(max_length=1000, blank=True, null=True)
+
+    def __str__(self):
+        return self.user.username
