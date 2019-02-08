@@ -35,7 +35,7 @@ class Command(BaseCommand):
     def get_any_user_details(self, bot):
         search_user = input('Enter any users name ')
         print('starting search for ', search_user)
-        data = bot.insta_explorer.get_userinfo_by_name(search_user)
+        data = bot.insta_explorer.get_user_info(search_user)
         print(data)
 
     def option_prompt(self):

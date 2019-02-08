@@ -1,14 +1,44 @@
-from django.db import models
+import logging
+import os
+
 from django.contrib.auth.models import User
+from django.db import models
 
 
 # Create your models here.
+
+
 class User(User):
     tags = models.ManyToManyField("Tag", blank=True)
     configuration = models.ForeignKey("Configuration",
                                       verbose_name="config",
                                       on_delete=models.CASCADE
                                       )
+
+    def get_tag_list(self):
+        tag_set = self.tags.all()
+        tag_list = []
+        for tag in tag_set:
+            tag_list.append(tag.tag)
+        return tag_list
+
+    def get_user_logger(self):
+        try:
+            os.makedirs('logs/' + self.username)
+        except FileExistsError:
+            pass
+
+        """Function setup as many loggers as you want"""
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+        handler = logging.FileHandler('logs/' + self.username + '/' + self.username + '.log')
+        handler.setFormatter(formatter)
+        handler.setLevel(logging.INFO)
+
+        logger = logging.getLogger(self.username + '.logs')
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+
+        return logger
 
     def __str__(self):
         return self.username
@@ -32,6 +62,8 @@ class Configuration(models.Model):
     unfollow_break_max = models.IntegerField(default=17)
     unfollow_break_min = models.IntegerField(default=3)
     log_mod = models.IntegerField(default=0)
+    start_time = models.TimeField(blank=True, null=True)
+    ends_time = models.TimeField(blank=True, null=True)
     proxy = models.CharField(max_length=50, default="", blank=True, null=True)
 
     def __str__(self):

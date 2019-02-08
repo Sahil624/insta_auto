@@ -10,3 +10,13 @@ class FakeUA(models.Model):
 
     def __str__(self):
         return self.fake_user_agent
+
+
+class Media(models.Model):
+    media_id = models.CharField(max_length=300)
+    status = models.IntegerField()
+    date_time = models.DateTimeField()
+    code = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.media_id

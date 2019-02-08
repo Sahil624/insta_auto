@@ -4,7 +4,7 @@ import json
 class MediaManager:
 
     def __init__(self, bot):
-        print('Initalizing media manager for ', bot.user_instance.username, 'with login status', bot.login_status)
+        bot.logger.debug('Initalizing media manager for ', bot.user_instance.username, 'with login status', bot.login_status)
         self.bot = bot
 
     def get_media_id_by_tag(self, tag):
@@ -15,7 +15,7 @@ class MediaManager:
                 tag = tag.replace("l:", "")
                 self.bot.by_location = True
                 log_string = "Get Media by location: %s" % tag
-                print(log_string)
+                self.bot.logger.info(log_string)
                 if self.bot.login_status == 1:
                     url_location = self.bot.url_location % tag
                     try:
@@ -28,13 +28,13 @@ class MediaManager:
                         )
                     except Exception as e:
                         self.bot.media_by_tag = []
-                        print("Except on get_media!")
-                        print("get_media_id_by_tag")
+                        self.bot.logger.error("Except on get_media!" + str(e))
                 else:
                     return 0
 
             else:
                 log_string = "Get Media by tag: %s" % tag
+                self.bot.logger.info(log_string)
                 self.bot.by_location = False
                 print(log_string)
                 if self.bot.login_status == 1:
@@ -49,8 +49,8 @@ class MediaManager:
                         )
                     except Exception as e:
                         self.bot.media_by_tag = []
+                        self.bot.logger.error('Except on get_media!' + str(e))
                         print("Except on get_media!")
-                        print("get_media_id_by_tag")
                 else:
                     return 0
 
@@ -97,7 +97,8 @@ class MediaManager:
                         + username
                     )
                     return username
-                except:
+                except Exception as e:
+                    self.bot.logger.error('username_by_mediaid exception' + str(e))
                     print("username_by_mediaid exception")
                     return False
             else:

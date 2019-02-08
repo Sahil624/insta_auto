@@ -3,14 +3,16 @@ import os
 import pickle
 import random
 import re
+import sys
 import time
 
 import fake_useragent
-from instaloader import instaloader
 import requests
+from instaloader import instaloader
 
 from bot.consts import LIST_OF_FAKE_UA
 from bot.core.insta_explorer import Explorer
+from bot.core.like_manager import LikeManager
 from bot.core.media_manager import MediaManager
 from bot.core.user_info import UserInfo
 from bot.models import FakeUA
@@ -42,12 +44,15 @@ class InstagramBot:
     login_credentials = {}
     media_manager = None
     media_by_tag = []
+    prog_run = True
 
     def __init__(self, login, password):
         try:
 
             self.user_instance = User.objects.get(username=login)
             self.password = password
+            self.logger = self.user_instance.get_user_logger()
+
             try:
                 fallback = random.sample(LIST_OF_FAKE_UA, 1)
                 fake_ua = fake_useragent.UserAgent(fallback=fallback[0])
@@ -55,6 +60,7 @@ class InstagramBot:
                 self.configurations = self.user_instance.configuration.__dict__
 
             except Exception as e:
+                self.logger.warning('Exception in creating fake user', e)
                 fake_ua = random.sample(LIST_OF_FAKE_UA, 1)
                 self.user_agent = self.check_and_insert_user_agent(str(fake_ua[0]))
 
@@ -70,9 +76,10 @@ class InstagramBot:
             self.login()
             self.media_manager = MediaManager(self)
             self.insta_explorer = Explorer(self)
+            self.like_manager = LikeManager(self)
 
         except User.DoesNotExist as e:
-            print(e)
+            self.logger.error('User does not exist', str(e))
 
     def login(self):
 
@@ -95,7 +102,7 @@ class InstagramBot:
         )
 
         if self.session_file is not None and os.path.isfile(self.session_file):
-            print(f"Found session file {self.session_file}")
+            self.logger.info(f"Found session file {self.session_file}")
             logged_in = True
             with open(self.session_file, "rb") as i:
                 cookies = pickle.load(i)
@@ -119,7 +126,7 @@ class InstagramBot:
             )
             print('login status code', login.status_code)
             if login.status_code != 200 and login.status_code != 400:
-                print("Request didn't return 200 as status code!", login.status_code)
+                self.logger.error("Request didn't return 200 as status code!", login.status_code)
 
             login_response = login.json()
 
@@ -127,14 +134,14 @@ class InstagramBot:
                 self.csrftoken = login.cookies["csrftoken"]
                 self.session_1.headers.update({"X-CSRFToken": login.cookies["csrftoken"]})
             except Exception as e:
-                print("Something wrong with login", e)
+                self.logger.error("Something wrong with login", e)
                 print(login.text)
             if login_response.get("errors"):
                 print(
                     "Something is wrong with Instagram! Please try again later..."
                 )
                 for error in login_response["errors"]["error"]:
-                    print(f"Error =>{error}")
+                    self.logger.error(error)
                 return
 
             if login_response.get("message") == "checkpoint_required":
@@ -145,6 +152,7 @@ class InstagramBot:
                         challenge_url = (
                             f"https://instagram.com{login_response['checkpoint_url']}"
                         )
+                    self.logger.warning("Challenge required at {challenge_url}")
                     print(f"Challenge required at {challenge_url}")
                     with self.session_1 as clg:
                         clg.headers.update(
@@ -199,6 +207,7 @@ class InstagramBot:
                             allow_redirects=True,
                         )
                         if complete_challenge.status_code != 200:
+                            self.logger.warning("Entered code is wrong, Try again later!")
                             print("Entered code is wrong, Try again later!")
                             return
                         self.csrftoken = complete_challenge.cookies["csrftoken"]
@@ -209,9 +218,11 @@ class InstagramBot:
 
                 except Exception as err:
                     print(f"Login failed, response: \n\n{login.text} {err}")
+                    self.logger.error("Login failed, response: \n\n{login.text} {err}")
                     quit()
             elif login_response.get("authenticated") is False:
                 print("Login error! Check your login data!")
+                self.logger.error("Login error! Check your login data!")
                 return
 
             else:
@@ -224,12 +235,10 @@ class InstagramBot:
             self.session_1.cookies["ig_pr"] = "1.25"
             self.session_1.cookies["ig_vh"] = "772"
             self.session_1.cookies["ig_or"] = "landscape-primary"
-            print('Logged in', logged_in, 'sleeping')
             time.sleep(5 * random.random())
-            print('waked up')
 
         if logged_in:
-            print('go go go')
+            self.logger.info('Logged in')
             try:
                 response = self.session_1.get("https://www.instagram.com/")
                 self.csrftoken = re.search('(?<="csrf_token":")\w+', response.text).group(0)
@@ -243,6 +252,7 @@ class InstagramBot:
                     log_string = f"{self.user_instance.username} login success!\n"
                     print(log_string)
                     if self.session_file is not None:
+                        self.logger.info(f'Saving cookies to session file {self.session_file}')
                         print(
                             f"Saving cookies to session file {self.session_file}"
                         )
@@ -251,6 +261,7 @@ class InstagramBot:
                 else:
                     self.login_status = False
                     print("Login error! Check your login data!")
+                    self.logger.error("Login error! Check your login data!")
                     if self.session_file is not None and os.path.isfile(self.session_file):
                         try:
                             os.remove(self.session_file)
@@ -258,20 +269,63 @@ class InstagramBot:
                             print(
                                 "Could not delete session file. Please delete manually", e
                             )
+                            self.logger.error("Could not delete session file. Please delete manually", e)
 
-                    # self.prog_run = False
+                    self.prog_run = False
             except requests.exceptions.ConnectionError:
+                self.logger.error('Problem with internet connectivity')
                 print('Problem with internet connectivity')
         else:
-            print("Login error! Connection error!")
+            self.logger.error("Login error! Connection error!")
+        print("Login error! Connection error!")
 
     def check_and_insert_user_agent(self, user_agent):
         try:
             fake_agent = FakeUA.objects.filter(user=self.user_instance)
             if len(fake_agent) is 0:
+                self.logger.info('Created Fake UA')
                 FakeUA.objects.create(fake_user_agent=user_agent, user=self.user_instance)
                 return user_agent
             else:
                 return fake_agent[0].fake_user_agent
         except Exception as e:
-            return user_agent
+            self.logger.info('Fake UA exception', str(e))
+        return user_agent
+
+    def run_bot(self):
+        while self.prog_run and self.login_status:
+            now = datetime.datetime.now()
+            if (not self.configurations.start_time or self.configurations.start_time <= now.time()) and (
+                    not self.configurations.end_time or self.configurations.end_time >= now.time()):
+                # ------------------- Get media_id -------------------
+                if len(self.media_by_tag) == 0:
+                    self.media_manager.get_media_id_by_tag(random.choice(self.user_instance.get_tag_list()))
+                    self.this_tag_like_count = 0
+                    self.max_tag_like_count = random.randint(
+                        1, self.configurations.max_like_for_one_tag
+                    )
+                    self.like_manager.remove_already_liked()
+                # ------------------- Like -------------------
+                # self.new_auto_mod_like()
+                # ------------------- Follow -------------------
+                # self.new_auto_mod_follow()
+                # # ------------------- Unfollow -------------------
+                # self.new_auto_mod_unfollow()
+                # # ------------------- Comment -------------------
+                # self.new_auto_mod_comments()
+                # # Bot iteration in 1 sec
+                # time.sleep(3)
+                # # print("Tic!")
+            else:
+                self.logger.warning("!!sleeping until {hour}:{min}".format(
+                    hour=self.configurations.start_at_h, min=self.configurations.start_at_m
+                ))
+                print(
+                    "!!sleeping until {hour}:{min}".format(
+                        hour=self.configurations.start_at_h, min=self.configurations.start_at_m
+                    ),
+                    end="\r",
+                )
+                time.sleep(100)
+        self.logger.info("Exit Program... GoodBye")
+        sys.exit(0)
