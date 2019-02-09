@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 
@@ -14,6 +15,9 @@ class User(User):
                                       verbose_name="config",
                                       on_delete=models.CASCADE
                                       )
+    liked_media = models.ManyToManyField("bot.Media",
+                                         verbose_name="liked_media",
+                                         blank=True, null=True)
 
     def get_tag_list(self):
         tag_set = self.tags.all()
@@ -28,9 +32,11 @@ class User(User):
         except FileExistsError:
             pass
 
+        file_name = 'logs/' + self.username + '/' + self.username + '-' + str(datetime.date.today()) + '.log'
+
         """Function setup as many loggers as you want"""
         formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-        handler = logging.FileHandler('logs/' + self.username + '/' + self.username + '.log')
+        handler = logging.FileHandler(filename=file_name)
         handler.setFormatter(formatter)
         handler.setLevel(logging.INFO)
 
@@ -64,6 +70,10 @@ class Configuration(models.Model):
     log_mod = models.IntegerField(default=0)
     start_time = models.TimeField(blank=True, null=True)
     ends_time = models.TimeField(blank=True, null=True)
+    media_max_like = models.IntegerField(default=150)
+    media_min_like = models.IntegerField(default=0)
+    user_max_follow = models.IntegerField(blank=True, null=True)
+    user_min_follow = models.IntegerField(blank=True, null=True)
     proxy = models.CharField(max_length=50, default="", blank=True, null=True)
 
     def __str__(self):

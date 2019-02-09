@@ -41,10 +41,23 @@ class InstagramBot:
     user_info = None
     login_status = False
     user_id = None
+    like_counter = 0
     login_credentials = {}
     media_manager = None
     media_by_tag = []
+    user_blacklist = {}
+    this_tag_like_count = 0
+    max_like_for_one_tag = 0
+    max_tag_like_count = 0
     prog_run = True
+
+    next_iteration = {
+        "Like": 0,
+        "Follow": 0,
+        "Unfollow": 0,
+        "Comments": 0,
+        "Populate": 0,
+    }
 
     def __init__(self, login, password):
         try:
@@ -52,12 +65,12 @@ class InstagramBot:
             self.user_instance = User.objects.get(username=login)
             self.password = password
             self.logger = self.user_instance.get_user_logger()
+            self.configurations = self.user_instance.configuration
 
             try:
                 fallback = random.sample(LIST_OF_FAKE_UA, 1)
                 fake_ua = fake_useragent.UserAgent(fallback=fallback[0])
                 self.user_agent = self.check_and_insert_user_agent(str(fake_ua))
-                self.configurations = self.user_instance.configuration.__dict__
 
             except Exception as e:
                 self.logger.warning('Exception in creating fake user', e)
@@ -65,6 +78,8 @@ class InstagramBot:
                 self.user_agent = self.check_and_insert_user_agent(str(fake_ua[0]))
 
             self.instaloader = instaloader.Instaloader()
+            self.time_in_day = 24 * 60 * 60
+            self.like_delay = self.time_in_day / self.configurations.likes_per_day
 
             self.bot_creation_time = datetime.datetime.now()
             self.bot_start_time = time.time()
