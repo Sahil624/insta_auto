@@ -20,3 +20,13 @@ class Media(models.Model):
 
     def __str__(self):
         return self.media_id
+
+
+class InteractedUser(models.Model):
+    user_id = models.IntegerField()
+    user_name = models.CharField(max_length=500)
+    unfollow_count = models.IntegerField(default=0)
+    last_followed_time = models.DateTimeField()
+
+    def __str__(self):
+        return self.user_name

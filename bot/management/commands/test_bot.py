@@ -43,9 +43,16 @@ class Command(BaseCommand):
             if option is 4:
                 self.test_auto_mode(bot)
 
+            if option is 5:
+                self.test_auto_follow(bot)
+
         else:
             print('Bot failed')
         logger.info('============ TEST BOT LOGS END ===============')
+
+    def test_auto_follow(self,bot):
+        bot.media_manager.get_media_id_by_tag('test')
+        bot.follow_manager.new_auto_mod_follow()
 
     def get_media_by_tag(self, bot):
         bot.media_manager.get_media_id_by_tag('test')
@@ -72,5 +79,6 @@ class Command(BaseCommand):
                        '2) get any user detail by username\n'
                        '3) test auto like \n'
                        '4) Test Auto Mode\n'
+                       '5) Test Auto Follow\n'
                        '-1) Exit test\n')
         return int(option)

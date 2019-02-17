@@ -17,7 +17,11 @@ class User(User):
                                       )
     liked_media = models.ManyToManyField("bot.Media",
                                          verbose_name="liked_media",
-                                         blank=True, null=True)
+                                         blank=True)
+
+    followed_users = models.ManyToManyField("bot.InteractedUser",
+                                            verbose_name="followed_users",
+                                            blank=True)
 
     def get_tag_list(self):
         tag_set = self.tags.all()

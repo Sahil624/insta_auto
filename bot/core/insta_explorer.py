@@ -17,11 +17,11 @@ class Explorer:
     def get_username_by_user_id(self, user_id):
         if self.bot.login_status:
             try:
-                profile = instaloader.Profile.from_id(self.bot.instaload.context, user_id)
+                profile = instaloader.Profile.from_id(self.bot.instaloader.context, user_id)
                 username = profile.username
                 return username
-            except:
-                self.bot.logger.warning("Except on get_username_by_user_id" + user_id)
+            except Exception as e:
+                self.bot.logger.warning("Except on get_username_by_user_id" + user_id + str(e))
                 return False
         else:
             return False

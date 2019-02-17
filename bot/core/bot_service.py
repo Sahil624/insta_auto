@@ -11,6 +11,7 @@ import requests
 from instaloader import instaloader
 
 from bot.consts import LIST_OF_FAKE_UA
+from bot.core.follow_manager import FollowManager
 from bot.core.insta_explorer import Explorer
 from bot.core.like_manager import LikeManager
 from bot.core.media_manager import MediaManager
@@ -43,6 +44,8 @@ class InstagramBot:
     user_id = None
     like_counter = 0
     login_credentials = {}
+    bot_follow_list = []
+    follow_counter = 0
     media_manager = None
     media_by_tag = []
     user_blacklist = {}
@@ -83,8 +86,11 @@ class InstagramBot:
             self.like_delay = self.time_in_day / self.configurations.likes_per_day
 
             self.unlike_per_day = self.configurations.unlike_per_day
-            if self.unlike_per_day and self.unlike_per_day != 0:
+            if self.configurations.unlike_per_day and self.configurations.unlike_per_day != 0:
                 self.unlike_per_day = self.time_in_day / self.unlike_per_day
+
+            if self.configurations.follow_per_day != 0:
+                self.follow_delay = self.time_in_day / self.configurations.follow_per_day
 
             self.bot_creation_time = datetime.datetime.now()
             self.bot_start_time = time.time()
@@ -97,6 +103,7 @@ class InstagramBot:
             self.media_manager = MediaManager(self)
             self.insta_explorer = Explorer(self)
             self.like_manager = LikeManager(self)
+            self.follow_manager = FollowManager(self)
 
         except User.DoesNotExist as e:
             self.logger.error('User does not exist', str(e))
@@ -331,7 +338,7 @@ class InstagramBot:
                 # TODO: Test unlike media
                 self.like_manager.new_auto_mod_unlike()
                 # ------------------- Follow -------------------
-                # self.new_auto_mod_follow()
+                self.follow_manager.new_auto_mod_follow()
                 # # ------------------- Unfollow -------------------
                 # self.new_auto_mod_unfollow()
                 # # ------------------- Comment -------------------
