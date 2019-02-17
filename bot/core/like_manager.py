@@ -45,19 +45,19 @@ class LikeManager:
         try:
             del self.bot.media_by_tag[0]
         except:
+            self.bot.logger.exception("Could not remove media")
             print("Could not remove media")
 
     def like_all_exist_media(self, media_size=-1, delay=True):
         """ Like all media ID that have self.media_by_tag """
 
         if self.bot.login_status:
-            if self.bot.media_by_tag != 0:
+            if len(self.bot.media_by_tag) != 0:
                 i = 0
                 for d in self.bot.media_by_tag:
                     if media_size > 0 or media_size < 0:
                         media_size -= 1
                         like_count = self.bot.media_by_tag[i]["node"]["edge_liked_by"]["count"]
-                        print('max_like',self.bot.configurations.media_max_like)
                         if (
                                 (
                                         like_count <= self.bot.configurations.media_max_like and like_count >= self.bot.configurations.media_min_like)
@@ -166,6 +166,7 @@ class LikeManager:
                                         + self.bot.like_delay * 0.2 * random.random()
                                     )
                                 else:
+                                    self.bot.logger.info("All media liked")
                                     return True
                 else:
                     return False
@@ -182,12 +183,14 @@ class LikeManager:
 
     def add_media(self, media_id, status):
         try:
-            Media.objects.create(media_id=media_id, status=status, date_time=timezone.now())
+            media_obj = Media.objects.create(media_id=media_id, status=status, date_time=timezone.now())
+            self.bot.user_instance.liked_media.add(media_obj)
         except Exception as e:
             self.bot.logger.error('Error in creating media object' + media_id)
 
     def like(self, media_id):
         """ Send http request to like media by ID """
+        print("Liking media id", media_id)
         if self.bot.login_status:
             url_likes = self.bot.url_likes % media_id
             try:

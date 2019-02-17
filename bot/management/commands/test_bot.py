@@ -40,6 +40,9 @@ class Command(BaseCommand):
             if option is 3:
                 self.liker(bot)
 
+            if option is 4:
+                self.test_auto_mode(bot)
+
         else:
             print('Bot failed')
         logger.info('============ TEST BOT LOGS END ===============')
@@ -60,10 +63,14 @@ class Command(BaseCommand):
         bot.like_manager.new_auto_mod_like()
         print('Like counter', bot.like_counter)
 
+    def test_auto_mode(self, bot):
+        bot.run_bot()
+
     def option_prompt(self):
         option = input('Enter test option avilable tests are :- \n'
                        '1) get Media by tags\n'
                        '2) get any user detail by username\n'
                        '3) test auto like \n'
+                       '4) Test Auto Mode\n'
                        '-1) Exit test\n')
         return int(option)

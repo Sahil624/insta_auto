@@ -311,7 +311,7 @@ class InstagramBot:
         while self.prog_run and self.login_status:
             now = datetime.datetime.now()
             if (not self.configurations.start_time or self.configurations.start_time <= now.time()) and (
-                    not self.configurations.end_time or self.configurations.end_time >= now.time()):
+                    not self.configurations.ends_time or self.configurations.ends_time >= now.time()):
                 # ------------------- Get media_id -------------------
                 if len(self.media_by_tag) == 0:
                     self.media_manager.get_media_id_by_tag(random.choice(self.user_instance.get_tag_list()))
@@ -321,7 +321,7 @@ class InstagramBot:
                     )
                     self.like_manager.remove_already_liked()
                 # ------------------- Like -------------------
-                # self.new_auto_mod_like()
+                self.like_manager.new_auto_mod_like()
                 # ------------------- Follow -------------------
                 # self.new_auto_mod_follow()
                 # # ------------------- Unfollow -------------------
