@@ -73,6 +73,8 @@ class Configuration(models.Model):
     media_max_like = models.IntegerField(default=150)
     media_min_like = models.IntegerField(default=0)
     user_max_follow = models.IntegerField(blank=True, null=True)
+    unlike_per_day = models.IntegerField(blank=True, null= True, default=0)
+    time_till_unlike = models.IntegerField(default=3 * 24 * 60 * 60)
     user_min_follow = models.IntegerField(blank=True, null=True)
     proxy = models.CharField(max_length=50, default="", blank=True, null=True)
 

@@ -1,3 +1,4 @@
+import datetime
 import random
 import sys
 import time
@@ -200,3 +201,64 @@ class LikeManager:
                 self.bot.logger.exception("Except on like!")
                 like = 0
             return like
+
+    def new_auto_mod_unlike(self):
+        if time.time() > self.bot.next_iteration["Unlike"] and self.bot.unlike_per_day != 0:
+            media = self.get_medias_to_unlike()
+            if media:
+                self.bot.logger.info("Trying to unlike media")
+                self.auto_unlike()
+                self.bot.next_iteration["Unlike"] = time.time() + add_time(
+                    self.bot.unfollow_delay
+                )
+
+    def get_medias_to_unlike(self):
+        """ Gets random medias that is older than unlike_time"""
+        try:
+            now_time = datetime.datetime.now()
+            cut_off_time = now_time - datetime.timedelta(seconds=self.bot.configurations.time_till_unlike)
+            medias = Media.objects.filter(date_time__lt=cut_off_time, status=200)
+            if len(medias):
+                return medias[0].media_id
+            return False
+
+        except Exception as e:
+            self.bot.logger.exception("Error in getting media to unlike", str(e))
+            return False
+
+    def auto_unlike(self):
+        checking = True
+        while checking:
+            media_to_unlike = self.get_medias_to_unlike()
+            if media_to_unlike:
+                request = self.unlike(media_to_unlike)
+                if request.status_code == 200:
+                    self.update_media_complete(media_to_unlike)
+                else:
+                    self.bot.logger.error("Couldn't unlike media, resuming.")
+                    checking = False
+            else:
+                self.bot.logger.warning("no medias to unlike")
+                checking = False
+
+    def unlike(self, media_id):
+        """ Send http request to unlike media by ID """
+        if self.bot.login_status:
+            url_unlike = self.bot.url_unlike % media_id
+            try:
+                unlike = self.bot.session_1.post(url_unlike)
+
+            except Exception as e:
+                self.bot.logger.exception("Except on unlike!", str(e))
+                unlike = 0
+            return unlike
+
+    def update_media_complete(self,media_id):
+        try:
+            media = Media.objects.get(media_id=media_id)
+            media.status = '201'
+            media.save()
+
+        except Media.DoesNotExist:
+            self.bot.logger.exception("Exception in updating media with media id"
+                                      + media_id+" Does not exist")

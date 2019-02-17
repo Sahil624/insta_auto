@@ -52,7 +52,8 @@ class InstagramBot:
     prog_run = True
 
     next_iteration = {
-        "Like": 0,
+         "Like": 0,
+        "Unlike": 0,
         "Follow": 0,
         "Unfollow": 0,
         "Comments": 0,
@@ -80,6 +81,10 @@ class InstagramBot:
             self.instaloader = instaloader.Instaloader()
             self.time_in_day = 24 * 60 * 60
             self.like_delay = self.time_in_day / self.configurations.likes_per_day
+
+            self.unlike_per_day = self.configurations.unlike_per_day
+            if self.unlike_per_day and self.unlike_per_day != 0:
+                self.unlike_per_day = self.time_in_day / self.unlike_per_day
 
             self.bot_creation_time = datetime.datetime.now()
             self.bot_start_time = time.time()
@@ -322,6 +327,9 @@ class InstagramBot:
                     self.like_manager.remove_already_liked()
                 # ------------------- Like -------------------
                 self.like_manager.new_auto_mod_like()
+                # ------------------- Unlike -------------------
+                # TODO: Test unlike media
+                self.like_manager.new_auto_mod_unlike()
                 # ------------------- Follow -------------------
                 # self.new_auto_mod_follow()
                 # # ------------------- Unfollow -------------------
