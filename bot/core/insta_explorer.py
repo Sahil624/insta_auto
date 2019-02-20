@@ -2,6 +2,8 @@ import json
 import re
 import time
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from instaloader import instaloader
 
 
@@ -37,7 +39,7 @@ class Explorer:
                 try:
                     all_data = json.loads(r.text)
                 except Exception as e:
-                    self.bot.logger.error('Error in loading data in get_userinfo_by_name' + str(r))
+                    self.bot.logger.error('Error in loading data in get_userinfo_by_name' + str(e))
                     return
                 user_info = all_data["user"]
                 follows = user_info["follows"]["count"]
@@ -48,6 +50,7 @@ class Explorer:
                     print(
                         "   >>>This is probably Selebgram, Business or Fake account"
                     )
+                    self.send_to_socket('This is probably Selebgram, Business or Fake account :- ' + username)
                 if follow_viewer:
                     return None
                 return user_info
@@ -75,7 +78,8 @@ class Explorer:
                     log_string = (
                             "Looks like account was deleted, skipping : %s" % current_user
                     )
-                    self.bot.logger.error(log_string)
+                    self.bot.logger.error("Looks like account was deleted, skipping : %s" % current_user)
+                    self.send_to_socket()
                     # insert_unfollow_count(self, user_id=current_id)
                     time.sleep(3)
                     return False
@@ -89,6 +93,7 @@ class Explorer:
                 self.bot.current_user_info = user_info
                 log_string = "Checking user info.."
                 self.bot.logger.info(log_string)
+                self.send_to_socket(log_string)
 
                 follows = user_info["edge_follow"]["count"]
                 follower = user_info["edge_followed_by"]["count"]
@@ -99,44 +104,56 @@ class Explorer:
                 has_requested_viewer = user_info["has_requested_viewer"]
                 log_string = "Follower : %i" % follower
                 self.bot.logger.info(log_string)
+                self.send_to_socket(log_string)
                 log_string = "Following : %s" % follows
                 self.bot.logger.info(log_string)
+                self.send_to_socket(log_string)
                 log_string = "Media : %i" % media
                 self.bot.logger.info(log_string)
+                self.send_to_socket(log_string)
                 if follows == 0 or follower / follows > 2:
                     self.is_selebgram = True
                     self.is_fake_account = False
                     self.bot.logger.warning("   >>>This is probably Selebgram account")
+                    self.send_to_socket("   >>>This is probably Selebgram account")
                 elif follower == 0 or follows / follower > 2:
                     self.is_fake_account = True
                     self.is_selebgram = False
                     self.bot.logger.warning("   >>>This is probably Fake account")
+                    self.send_to_socket("   >>>This is probably Fake account")
                 else:
                     self.is_selebgram = False
                     self.is_fake_account = False
                     self.bot.logger.info("   >>>This is a normal account")
+                    self.send_to_socket("   >>>This is a normal account")
 
                 if media > 0 and follows / media < 25 and follower / media < 25:
                     self.is_active_user = True
                     self.bot.logger.info("   >>>This user is active")
+                    self.send_to_socket("   >>>This user is active")
                 else:
                     self.is_active_user = False
                     self.bot.logger.info("   >>>This user is passive")
+                    self.send_to_socket("   >>>This user is passive")
 
                 if follow_viewer or has_requested_viewer:
                     self.is_follower = True
+                    self.send_to_socket("   >>>This account is following you")
                     self.bot.logger.info("   >>>This account is following you")
                 else:
                     self.is_follower = False
                     self.bot.logger.info("   >>>This account is NOT following you")
+                    self.send_to_socket("   >>>This account is NOT following you")
 
                 if followed_by_viewer or requested_by_viewer:
                     self.is_following = True
                     self.bot.logger.info("   >>>You are following this account")
+                    self.send_to_socket("   >>>You are following this account")
 
                 else:
                     self.is_following = False
                     self.bot.logger.info("   >>>You are NOT following this account")
+                    self.send_to_socket("   >>>You are NOT following this account")
 
             else:
                 self.bot.logger.error("Except on auto_unfollow!")
@@ -144,3 +161,11 @@ class Explorer:
                 return False
         else:
             return 0
+
+    def send_to_socket(self, message):
+        layer = get_channel_layer()
+        async_to_sync(layer.group_send)('log_'+ self.bot.user_instance.username,
+                                        {
+                                            'type': 'log_message',
+                                            'message': message
+                                        })

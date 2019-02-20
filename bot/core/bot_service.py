@@ -8,6 +8,8 @@ import time
 
 import fake_useragent
 import requests
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from instaloader import instaloader
 
 from bot.consts import LIST_OF_FAKE_UA
@@ -53,6 +55,13 @@ class InstagramBot:
     max_like_for_one_tag = 0
     max_tag_like_count = 0
     prog_run = True
+
+    # If instagram ban you - query return 400 error.
+    error_400 = 0
+    # If you have 3 400 error in row - looks like you banned.
+    error_400_to_ban = 3
+    # If InstaBot think you are banned - going to sleep.
+    ban_sleep_time = 3 * 60 * 60
 
     next_iteration = {
          "Like": 0,
@@ -130,6 +139,7 @@ class InstagramBot:
 
         if self.session_file is not None and os.path.isfile(self.session_file):
             self.logger.info(f"Found session file {self.session_file}")
+            self.send_to_socket(f"Found session file {self.session_file}")
             logged_in = True
             with open(self.session_file, "rb") as i:
                 cookies = pickle.load(i)
@@ -154,6 +164,7 @@ class InstagramBot:
             print('login status code', login.status_code)
             if login.status_code != 200 and login.status_code != 400:
                 self.logger.error("Request didn't return 200 as status code!", login.status_code)
+                self.send_to_socket("Request didn't return 200 as status code! Status code :-"+ str(login.status_code))
 
             login_response = login.json()
 
@@ -161,13 +172,16 @@ class InstagramBot:
                 self.csrftoken = login.cookies["csrftoken"]
                 self.session_1.headers.update({"X-CSRFToken": login.cookies["csrftoken"]})
             except Exception as e:
+                self.send_to_socket("Something wrong with login"+ str(e))
                 self.logger.error("Something wrong with login", e)
                 print(login.text)
             if login_response.get("errors"):
                 print(
                     "Something is wrong with Instagram! Please try again later..."
                 )
+                self.send_to_socket("Something is wrong with Instagram! Please try again later...")
                 for error in login_response["errors"]["error"]:
+                    self.send_to_socket(error)
                     self.logger.error(error)
                 return
 
@@ -179,7 +193,8 @@ class InstagramBot:
                         challenge_url = (
                             f"https://instagram.com{login_response['checkpoint_url']}"
                         )
-                    self.logger.warning("Challenge required at {challenge_url}")
+                    self.logger.warning(f"Challenge required at {challenge_url}")
+                    self.send_to_socket(f"Challenge required at {challenge_url}")
                     print(f"Challenge required at {challenge_url}")
                     with self.session_1 as clg:
                         clg.headers.update(
@@ -235,6 +250,7 @@ class InstagramBot:
                         )
                         if complete_challenge.status_code != 200:
                             self.logger.warning("Entered code is wrong, Try again later!")
+                            self.send_to_socket("Entered code is wrong, Try again later!")
                             print("Entered code is wrong, Try again later!")
                             return
                         self.csrftoken = complete_challenge.cookies["csrftoken"]
@@ -246,10 +262,12 @@ class InstagramBot:
                 except Exception as err:
                     print(f"Login failed, response: \n\n{login.text} {err}")
                     self.logger.error("Login failed, response: \n\n{login.text} {err}")
+                    self.send_to_socket("Login failed, response: \n\n{login.text} {err}")
                     quit()
             elif login_response.get("authenticated") is False:
                 print("Login error! Check your login data!")
                 self.logger.error("Login error! Check your login data!")
+                self.send_to_socket("Login error! Check your login data!")
                 return
 
             else:
@@ -266,6 +284,7 @@ class InstagramBot:
 
         if logged_in:
             self.logger.info('Logged in')
+            self.send_to_socket("Logged in")
             try:
                 response = self.session_1.get("https://www.instagram.com/")
                 self.csrftoken = re.search('(?<="csrf_token":")\w+', response.text).group(0)
@@ -289,6 +308,7 @@ class InstagramBot:
                     self.login_status = False
                     print("Login error! Check your login data!")
                     self.logger.error("Login error! Check your login data!")
+                    self.send_to_socket("Login error! Check your login data!")
                     if self.session_file is not None and os.path.isfile(self.session_file):
                         try:
                             os.remove(self.session_file)
@@ -350,6 +370,9 @@ class InstagramBot:
                 self.logger.warning("!!sleeping until {hour}:{min}".format(
                     hour=self.configurations.start_at_h, min=self.configurations.start_at_m
                 ))
+                self.send_to_socket("!!sleeping until {hour}:{min}".format(
+                    hour=self.configurations.start_at_h, min=self.configurations.start_at_m
+                ))
                 print(
                     "!!sleeping until {hour}:{min}".format(
                         hour=self.configurations.start_at_h, min=self.configurations.start_at_m
@@ -357,5 +380,14 @@ class InstagramBot:
                     end="\r",
                 )
                 time.sleep(100)
+        self.send_to_socket("Exit Program... GoodBye")
         self.logger.info("Exit Program... GoodBye")
         sys.exit(0)
+
+    def send_to_socket(self, message):
+        layer = get_channel_layer()
+        async_to_sync(layer.group_send)('log_'+ self.user_instance.username,
+                                        {
+                                            'type': 'log_message',
+                                            'message': message
+                                        })

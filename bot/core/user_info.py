@@ -146,3 +146,4 @@ class UserInfo:
                     # end of data
                     return True
         return False
+

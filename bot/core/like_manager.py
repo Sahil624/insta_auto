@@ -3,7 +3,10 @@ import random
 import sys
 import time
 
+from asgiref.sync import async_to_sync
 from django.utils import timezone
+
+from channels.layers import get_channel_layer
 
 from bot.core.utils import add_time
 from bot.models import Media
@@ -12,6 +15,8 @@ from bot.models import Media
 class LikeManager:
 
     def __init__(self, bot):
+        self.layer = get_channel_layer()
+        self.socket_group = 'log_' + bot.user_instance.username
         self.bot = bot
         self.bot.logger.info('Initiating Like Manager')
 
@@ -47,7 +52,6 @@ class LikeManager:
             del self.bot.media_by_tag[0]
         except:
             self.bot.logger.exception("Could not remove media")
-            print("Could not remove media")
 
     def like_all_exist_media(self, media_size=-1, delay=True):
         """ Like all media ID that have self.media_by_tag """
@@ -78,13 +82,16 @@ class LikeManager:
                                     self.bot.logger.warning(
                                         f"Not liking media owned by blacklisted user: {blacklisted_user_name}"
                                     )
+                                    self.send_socket_message(f"Not liking media owned by blacklisted user: {blacklisted_user_name}")
                                     return False
                                 if self.bot.media_by_tag[i]["node"]["owner"]["id"] == self.bot.user_id:
                                     self.bot.logger.info("Keep calm - It's your own media ;)")
+                                    self.send_socket_message("Keep calm - It's your own media ;)")
                                 return False
 
                             if self.check_already_liked(media_id=self.bot.media_by_tag[i]["node"]["id"]):
                                 self.bot.logger.info("Keep calm - It's already liked ;)")
+                                self.send_socket_message("Keep calm - It's already liked ;)")
                                 return False
 
                             try:
@@ -114,6 +121,7 @@ class LikeManager:
                                         self.bot.logger.warning(
                                             f"Not liking media with blacklisted tag(s): {matching_tags}"
                                         )
+                                        self.send_socket_message(f"Not liking media with blacklisted tag(s): {matching_tags}")
                                         return False
                             except Exception as e:
                                 self.bot.logger.error("Except on like_all_exist_media")
@@ -123,6 +131,7 @@ class LikeManager:
                                 self.bot.media_by_tag[i]["node"]["id"]
                             )
                             self.bot.logger.info(log_string)
+                            self.send_socket_message(log_string)
 
                             like = self.like(self.bot.media_by_tag[i]["node"]["id"])
                             if like != 0:
@@ -133,21 +142,25 @@ class LikeManager:
                                     # TODO: update log counter
                                     log_string = f"Liked: {self.bot.media_by_tag[i]['node']['id']}." \
                                         f"Like #{self.bot.like_counter}."
+
+                                    self.send_socket_message(log_string)
                                     self.add_media(media_id=self.bot.media_by_tag[i]["node"]["id"], status='200')
                                     self.bot.logger.info(log_string)
 
                                 elif like.status_code == 400:
-                                    log_string = f"Not liked: {like.status_code}"
+                                    log_string = f"Not liked: {like.status_code} : 400 like till now {self.bot.error_400}"
                                     self.bot.logger.warning(log_string)
                                     self.add_media(
                                         media_id=self.bot.media_by_tag[i]["node"]["id"],
                                         status="400",
                                     )
+                                    self.send_socket_message(log_string)
                                     # Some error. If repeated - can be ban!
                                     # TODO: confirm this logic
                                     if self.bot.error_400 >= self.bot.error_400_to_ban:
                                         # Look like you banned!
                                         # TODO: check ban sleep time variable
+                                        self.bot.logger.critical("Looks like got banned. Sleeping for "+ self.bot.ban_sleep_time)
                                         time.sleep(self.bot.ban_sleep_time)
                                     else:
                                         self.bot.error_400 += 1
@@ -157,6 +170,7 @@ class LikeManager:
                                         media_id=self.bot.media_by_tag[i]["node"]["id"],
                                         status=str(like.status_code),
                                     )
+                                    self.send_socket_message(log_string)
                                     self.bot.logger.warning(log_string)
                                     return False
                                     # Some error.
@@ -167,6 +181,7 @@ class LikeManager:
                                         + self.bot.like_delay * 0.2 * random.random()
                                     )
                                 else:
+                                    self.send_socket_message("All media liked")
                                     self.bot.logger.info("All media liked")
                                     return True
                 else:
@@ -185,7 +200,8 @@ class LikeManager:
     def add_media(self, media_id, status):
         try:
             media_obj = Media.objects.create(media_id=media_id, status=status, date_time=timezone.now())
-            self.bot.user_instance.liked_media.add(media_obj)
+            if status is '200':
+                self.bot.user_instance.liked_media.add(media_obj)
         except Exception as e:
             self.bot.logger.error('Error in creating media object' + media_id)
 
@@ -262,3 +278,11 @@ class LikeManager:
         except Media.DoesNotExist:
             self.bot.logger.exception("Exception in updating media with media id"
                                       + media_id+" Does not exist")
+
+    def send_socket_message(self, message):
+        async_to_sync(self.layer.group_send)(self.socket_group,
+                                                 {
+                                                     'type': 'log_message',
+                                                     'message': message
+                                                 },
+                                             )

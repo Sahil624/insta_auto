@@ -1,5 +1,8 @@
 import json
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
 
 class MediaManager:
 
@@ -34,9 +37,8 @@ class MediaManager:
 
             else:
                 log_string = "Get Media by tag: %s" % tag
-                self.bot.logger.info(log_string)
+                # self.bot.logger.info(log_string)
                 self.bot.by_location = False
-                print(log_string)
                 if self.bot.login_status == 1:
                     url_tag = self.bot.url_tag % tag
                     try:
@@ -50,7 +52,6 @@ class MediaManager:
                     except Exception as e:
                         self.bot.media_by_tag = []
                         self.bot.logger.error('Except on get_media!' + str(e))
-                        print("Except on get_media!")
                 else:
                     return 0
 
@@ -103,3 +104,11 @@ class MediaManager:
                     return False
             else:
                 return ""
+
+    def send_to_socket(self, message):
+        layer = get_channel_layer()
+        async_to_sync(layer.group_send)('log_'+ self.bot.user_instance.username,
+                                        {
+                                            'type': 'log_message',
+                                            'message': message
+                                        })

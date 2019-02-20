@@ -6,9 +6,12 @@ def add_time(time):
     return time * 0.9 + time * 0.2 * random.random()
 
 
-# def print_dict(dict):
-#     # for x in dict:
-#     #     print(x)
-#     #     for y in dict[x]:
-#     #         print(y, ':', dict[x][y])
-#     print(str(dict['likes_per_day']))
+def singleton(class_):
+    instances = {}
+
+    def get_instance(*args, **kwargs):
+        if class_ not in instances:
+            instances[class_] = class_(*args, **kwargs)
+        return instances[class_]
+
+    return get_instance

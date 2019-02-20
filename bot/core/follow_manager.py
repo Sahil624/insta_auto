@@ -4,6 +4,8 @@ import time
 
 import json
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.utils import timezone
 
 from bot.core.utils import add_time
@@ -28,6 +30,7 @@ class FollowManager:
         ):
             if self.bot.media_by_tag[0]["node"]["owner"]["id"] == self.bot.user_id:
                 self.logger.warning("Keep calm - It's your own profile ;)")
+                self.send_to_socket("Keep calm - It's your own profile ;)")
                 return
 
             if self.bot.configurations.user_min_follow != 0 or self.bot.configurations.user_max_follow != 0:
@@ -56,6 +59,7 @@ class FollowManager:
                         self.logger.warning(
                             f"Won't follow {username}: does not meet user_max_follow requirement"
                         )
+                        self.send_to_socket(f"Won't follow {username}: does not meet user_max_follow requirement")
                         return
 
                 except Exception:
@@ -69,6 +73,7 @@ class FollowManager:
                 self.logger.warning(
                     f"Already followed before {self.bot.media_by_tag[0]['node']['owner']['id']}"
                 )
+                self.send_to_socket(f"Already followed before {self.bot.media_by_tag[0]['node']['owner']['id']}")
                 self.bot.next_iteration["Follow"] = time.time() + add_time(
                     self.bot.follow_delay / 2
                 )
@@ -78,6 +83,7 @@ class FollowManager:
                 f"Trying to follow: {self.bot.media_by_tag[0]['node']['owner']['id']}"
             )
             self.logger.info(log_string)
+            self.send_to_socket(log_string)
             self.bot.next_iteration["Follow"] = time.time() + add_time(
                 self.bot.follow_delay
             )
@@ -117,6 +123,7 @@ class FollowManager:
                     self.bot.follow_counter += 1
                     log_string = f"Followed: {user_id} #{self.bot.follow_counter}."
                     self.logger.info(log_string)
+                    self.send_to_socket(log_string)
                     self.add_user(user_id=user_id, username=username)
                 return follow
             except Exception as e:
@@ -132,3 +139,11 @@ class FollowManager:
 
         except Exception as e:
             self.logger.exception("Exception in adding interacted user" + str(e))
+
+    def send_to_socket(self, message):
+        layer = get_channel_layer()
+        async_to_sync(layer.group_send)('log_'+ self.bot.user_instance.username,
+                                        {
+                                            'type': 'log_message',
+                                            'message': message
+                                        })
