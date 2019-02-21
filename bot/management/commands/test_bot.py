@@ -46,6 +46,9 @@ class Command(BaseCommand):
             if option is 5:
                 self.test_auto_follow(bot)
 
+            if option is 6:
+                self.test_comment(bot)
+
         else:
             print('Bot failed')
         logger.info('============ TEST BOT LOGS END ===============')
@@ -73,6 +76,10 @@ class Command(BaseCommand):
     def test_auto_mode(self, bot):
         bot.run_bot()
 
+    def test_comment(self, bot):
+        bot.media_manager.get_media_id_by_tag('test')
+        bot.comment_manager.new_auto_mod_comments()
+
     def option_prompt(self):
         option = input('Enter test option avilable tests are :- \n'
                        '1) get Media by tags\n'
@@ -80,5 +87,6 @@ class Command(BaseCommand):
                        '3) test auto like \n'
                        '4) Test Auto Mode\n'
                        '5) Test Auto Follow\n'
+                       '6) Test auto comment\n'
                        '-1) Exit test\n')
         return int(option)

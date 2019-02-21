@@ -13,6 +13,7 @@ from channels.layers import get_channel_layer
 from instaloader import instaloader
 
 from bot.consts import LIST_OF_FAKE_UA
+from bot.core.comment_manager import CommentManager
 from bot.core.follow_manager import FollowManager
 from bot.core.insta_explorer import Explorer
 from bot.core.like_manager import LikeManager
@@ -52,6 +53,7 @@ class InstagramBot:
     media_by_tag = []
     user_blacklist = {}
     this_tag_like_count = 0
+    comments_counter = 0
     max_like_for_one_tag = 0
     max_tag_like_count = 0
     prog_run = True
@@ -101,6 +103,9 @@ class InstagramBot:
             if self.configurations.follow_per_day != 0:
                 self.follow_delay = self.time_in_day / self.configurations.follow_per_day
 
+            if self.configurations.comments_per_day != 0:
+                self.comments_delay = self.time_in_day / self.configurations.comments_per_day
+
             self.bot_creation_time = datetime.datetime.now()
             self.bot_start_time = time.time()
 
@@ -112,6 +117,7 @@ class InstagramBot:
             self.media_manager = MediaManager(self)
             self.insta_explorer = Explorer(self)
             self.like_manager = LikeManager(self)
+            self.comment_manager = CommentManager(self)
             self.follow_manager = FollowManager(self)
 
         except User.DoesNotExist as e:
@@ -362,7 +368,7 @@ class InstagramBot:
                 # # ------------------- Unfollow -------------------
                 # self.new_auto_mod_unfollow()
                 # # ------------------- Comment -------------------
-                # self.new_auto_mod_comments()
+                self.comment_manager.new_auto_mod_comments()
                 # # Bot iteration in 1 sec
                 # time.sleep(3)
                 # # print("Tic!")

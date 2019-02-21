@@ -17,11 +17,17 @@ class User(User):
                                       )
     liked_media = models.ManyToManyField("bot.Media",
                                          verbose_name="liked_media",
-                                         blank=True)
+                                         blank=True,
+                                         related_name="liked_media")
 
     followed_users = models.ManyToManyField("bot.InteractedUser",
                                             verbose_name="followed_users",
                                             blank=True)
+
+    commented_media = models.ManyToManyField("bot.Media",
+                                             verbose_name="commented_media",
+                                             blank=True,
+                                             related_name="commented_media")
 
     def get_tag_list(self):
         tag_set = self.tags.all()
@@ -64,7 +70,7 @@ class Tag(models.Model):
 class Configuration(models.Model):
     name = models.CharField(max_length=50)
     likes_per_day = models.IntegerField(default=709)
-    comment_per_day = models.IntegerField(default=31)
+    comments_per_day = models.IntegerField(default=31)
     max_like_for_one_tag = models.IntegerField(default=36)
     follow_per_day = models.IntegerField(default=360)
     follow_time = models.IntegerField(default=3600)

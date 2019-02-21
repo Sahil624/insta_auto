@@ -17,6 +17,7 @@ class Media(models.Model):
     status = models.IntegerField()
     date_time = models.DateTimeField()
     code = models.CharField(max_length=100)
+    comment = models.CharField(max_length=200, blank=True, null=True)
 
     def __str__(self):
         return self.media_id
