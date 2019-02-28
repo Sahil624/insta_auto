@@ -18,6 +18,7 @@ from bot.core.follow_manager import FollowManager
 from bot.core.insta_explorer import Explorer
 from bot.core.like_manager import LikeManager
 from bot.core.media_manager import MediaManager
+from bot.core.unfollow_manager import UnfollowManager
 from bot.core.user_info import UserInfo
 from bot.models import FakeUA
 from users.models import User
@@ -45,6 +46,7 @@ class InstagramBot:
     user_info = None
     login_status = False
     user_id = None
+    unfollow_counter = 0
     like_counter = 0
     login_credentials = {}
     bot_follow_list = []
@@ -53,6 +55,8 @@ class InstagramBot:
     media_by_tag = []
     user_blacklist = {}
     this_tag_like_count = 0
+    # TODO: Add to model
+    unfollow_whitelist = [],
     comments_counter = 0
     max_like_for_one_tag = 0
     max_tag_like_count = 0
@@ -66,7 +70,7 @@ class InstagramBot:
     ban_sleep_time = 3 * 60 * 60
 
     next_iteration = {
-         "Like": 0,
+        "Like": 0,
         "Unlike": 0,
         "Follow": 0,
         "Unfollow": 0,
@@ -106,8 +110,12 @@ class InstagramBot:
             if self.configurations.comments_per_day != 0:
                 self.comments_delay = self.time_in_day / self.configurations.comments_per_day
 
+            if self.configurations.unfollow_per_day != 0:
+                self.unfollow_delay = self.time_in_day / self.configurations.unfollow_per_day
+
             self.bot_creation_time = datetime.datetime.now()
             self.bot_start_time = time.time()
+            self.bot_mode = 0
 
             self.session_file = f"{self.user_instance.username}.session"
             self.session_1 = requests.Session()
@@ -119,6 +127,7 @@ class InstagramBot:
             self.like_manager = LikeManager(self)
             self.comment_manager = CommentManager(self)
             self.follow_manager = FollowManager(self)
+            self.unfollow_manager = UnfollowManager(self)
 
         except User.DoesNotExist as e:
             self.logger.error('User does not exist', str(e))
@@ -170,7 +179,7 @@ class InstagramBot:
             print('login status code', login.status_code)
             if login.status_code != 200 and login.status_code != 400:
                 self.logger.error("Request didn't return 200 as status code!", login.status_code)
-                self.send_to_socket("Request didn't return 200 as status code! Status code :-"+ str(login.status_code))
+                self.send_to_socket("Request didn't return 200 as status code! Status code :-" + str(login.status_code))
 
             login_response = login.json()
 
@@ -178,7 +187,7 @@ class InstagramBot:
                 self.csrftoken = login.cookies["csrftoken"]
                 self.session_1.headers.update({"X-CSRFToken": login.cookies["csrftoken"]})
             except Exception as e:
-                self.send_to_socket("Something wrong with login"+ str(e))
+                self.send_to_socket("Something wrong with login" + str(e))
                 self.logger.error("Something wrong with login", e)
                 print(login.text)
             if login_response.get("errors"):
@@ -366,11 +375,11 @@ class InstagramBot:
                 # ------------------- Follow -------------------
                 self.follow_manager.new_auto_mod_follow()
                 # # ------------------- Unfollow -------------------
-                # self.new_auto_mod_unfollow()
+                self.unfollow_manager.new_auto_mod_unfollow()
                 # # ------------------- Comment -------------------
                 self.comment_manager.new_auto_mod_comments()
                 # # Bot iteration in 1 sec
-                # time.sleep(3)
+                time.sleep(3)
                 # # print("Tic!")
             else:
                 self.logger.warning("!!sleeping until {hour}:{min}".format(
@@ -390,9 +399,38 @@ class InstagramBot:
         self.logger.info("Exit Program... GoodBye")
         sys.exit(0)
 
+    # def stop_bot(self):
+    #     # Unfollow all bot follow
+    #     if self.follow_counter >= self.unfollow_counter:
+    #         for i in range(len(self.bot_follow_list)):
+    #             f = self.bot_follow_list[0]
+    #             if check_already_unfollowed(self, f[0]):
+    #                 log_string = "Already unfollowed before, skipping: %s" % (f[0])
+    #                 self.logger.info(log_string)
+    #             else:
+    #                 log_string = "Trying to unfollow: %s" % (f[0])
+    #                 self.logger.info(log_string)
+    #                 self.unfollow_on_cleanup(f[0])
+    #                 sleeptime = random.randint(
+    #                     self.configurations.unfollow_break_min, self.configurations.unfollow_break_max
+    #                 )
+    #                 log_string = "Pausing for %i seconds... %i of %i" % (
+    #                     sleeptime,
+    #                     self.unfollow_counter,
+    #                     self.follow_counter,
+    #                 )
+    #                 self.write_log(log_string)
+    #                 time.sleep(sleeptime)
+    #             self.bot_follow_list.remove(f)
+    #
+    #     # Logout
+    #     if self.login_status and self.session_file is None:
+    #         self.logout()
+    #     self.prog_run = False
+
     def send_to_socket(self, message):
         layer = get_channel_layer()
-        async_to_sync(layer.group_send)('log_'+ self.user_instance.username,
+        async_to_sync(layer.group_send)('log_' + self.user_instance.username,
                                         {
                                             'type': 'log_message',
                                             'message': message

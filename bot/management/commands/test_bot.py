@@ -49,6 +49,9 @@ class Command(BaseCommand):
             if option is 6:
                 self.test_comment(bot)
 
+            if option is 7:
+                self.test_unfollow(bot)
+
         else:
             print('Bot failed')
         logger.info('============ TEST BOT LOGS END ===============')
@@ -80,6 +83,11 @@ class Command(BaseCommand):
         bot.media_manager.get_media_id_by_tag('test')
         bot.comment_manager.new_auto_mod_comments()
 
+    def test_unfollow(self,bot):
+        bot.media_manager.get_media_id_by_tag('test')
+        for i in range(5):
+            bot.unfollow_manager.new_auto_mod_unfollow(test_run=True)
+
     def option_prompt(self):
         option = input('Enter test option avilable tests are :- \n'
                        '1) get Media by tags\n'
@@ -88,5 +96,6 @@ class Command(BaseCommand):
                        '4) Test Auto Mode\n'
                        '5) Test Auto Follow\n'
                        '6) Test auto comment\n'
+                       '7) Test unfollow \n'
                        '-1) Exit test\n')
         return int(option)

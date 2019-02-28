@@ -78,6 +78,7 @@ class Configuration(models.Model):
     unfollow_break_max = models.IntegerField(default=17)
     unfollow_break_min = models.IntegerField(default=3)
     log_mod = models.IntegerField(default=0)
+    unfollow_recent_feed = models.BooleanField(default=True)
     start_time = models.TimeField(blank=True, null=True)
     ends_time = models.TimeField(blank=True, null=True)
     media_max_like = models.IntegerField(default=150)
