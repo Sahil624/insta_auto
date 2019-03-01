@@ -1,4 +1,5 @@
 import json
+import random
 import re
 import time
 
@@ -162,9 +163,46 @@ class Explorer:
         else:
             return 0
 
+    def populate_user_blacklist(self):
+        for user in self.bot.user_blacklist:
+            user_id_url = self.bot.url_user_detail % user
+            info = self.bot.session_1.get(user_id_url)
+            # cevent error if 'Account of user was deleted or link is invalid
+            from json import JSONDecodeError
+
+            try:
+                all_data = json.loads(
+                    re.search(
+                        "window._sharedData = (.*?);</script>", info.text, re.DOTALL
+                    ).group(1)
+                )
+            except JSONDecodeError as e:
+                log = (
+                    f"Account of user {user} was deleted or link is " "invalid"
+                )
+                self.bot.logger.info(log)
+                self.send_to_socket(log)
+
+            except Exception as e:
+                log = f"Failed to load user_id for {user}"
+                self.bot.logger.exception(log)
+                self.send_to_socket(log)
+
+            else:
+                # prevent exception if user have no media
+                id_user = all_data["entry_data"]["ProfilePage"][0]["graphql"]["user"][
+                    "id"
+                ]
+                # Update the user_name with the user_id
+                self.bot.user_blacklist[user] = id_user
+                log = f"Blacklisted user {user} added with ID: {id_user}"
+                self.bot.logger.info(log)
+                self.send_to_socket(log)
+                time.sleep(5 * random.random())
+
     def send_to_socket(self, message):
         layer = get_channel_layer()
-        async_to_sync(layer.group_send)('log_'+ self.bot.user_instance.username,
+        async_to_sync(layer.group_send)('log_' + self.bot.user_instance.username,
                                         {
                                             'type': 'log_message',
                                             'message': message

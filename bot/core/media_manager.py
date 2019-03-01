@@ -71,7 +71,7 @@ class MediaManager:
             if only_code:
                 return shortened_id
             else:
-                return f"instagram.com/p/{shortened_id}/"
+                return f"https://www.instagram.com/p/{shortened_id}/"
 
     def get_username_by_media_id(self, media_id):
         """ Get username by media ID Thanks to Nikished """

@@ -122,7 +122,7 @@ class CommentManager:
 
     def send_to_socket(self, message):
         layer = get_channel_layer()
-        async_to_sync(layer.group_send)('log_'+ self.bot.user_instance.username,
+        async_to_sync(layer.group_send)('log_' + self.bot.user_instance.username,
                                         {
                                             'type': 'log_message',
                                             'message': message
@@ -130,7 +130,19 @@ class CommentManager:
 
     def add_media(self, media_id, status):
         try:
-            media_obj, created = Media.objects.get_or_create(media_id=media_id, status=status, date_time=timezone.now())
+
+            try:
+                url = self.bot.media_manager.get_instagram_url_from_media_id(media_id)
+            except:
+                url = None
+
+            try:
+                username = self.bot.media_manager.get_username_by_media_id(media_id)
+            except:
+                username = None
+
+            media_obj, created = Media.objects.get_or_create(media_id=media_id, status=status, date_time=timezone.now(),
+                                                             url=url, media_owner=username)
             if status is '200':
                 self.bot.user_instance.commented_media.add(media_obj)
         except Exception as e:
@@ -148,24 +160,45 @@ class CommentManager:
     def comment(self, media_id, comment_text):
         """ Send http request to comment """
         if self.bot.login_status:
+
             comment_post = {"comment_text": comment_text}
             url_comment = self.bot.url_comment % media_id
             try:
                 comment = self.bot.session_1.post(url_comment, data=comment_post)
                 if comment.status_code == 200:
+
+                    try:
+                        url = self.bot.media_manager.get_instagram_url_from_media_id(media_id)
+                    except:
+                        url = None
+
+                    try:
+                        owner = self.bot.media_manager.get_username_by_media_id(media_id=media_id)
+                    except:
+                        owner = None
+
                     self.bot.comments_counter += 1
                     log_string = f"Write: {comment_text}. #{self.bot.comments_counter}."
                     try:
 
-                        media_obj = Media.objects.get(media_id = media_id)
+                        media_obj = Media.objects.get(media_id=media_id)
                         media_obj.comment = comment_text
+                        media_obj.url = url
+                        media_obj.media_owner = owner
                         media_obj.save()
 
-                    except Media.DoesNotExist:
-                        pass
+                        self.bot.user_instance.commented_media.add(media_obj)
 
-                    except Exception:
-                        pass
+                    except Media.DoesNotExist:
+                        try:
+                            media_obj = Media.objects.create(media_id=media_id, status=200, date_time=timezone.now(),
+                                                             comment=comment_text, url=url, media_owner=owner)
+                            self.bot.user_instance.commented_media.add(media_obj)
+                        except Exception as e:
+                            self.logger.exception('Exception in creating media' + str(e))
+
+                    except Exception as e:
+                        self.logger.exception('Exception in adding comment to media obj', str(e))
 
                     self.logger.info(log_string)
                     self.send_to_socket(log_string)

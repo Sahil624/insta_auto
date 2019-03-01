@@ -1,8 +1,10 @@
+import atexit
 import datetime
 import os
 import pickle
 import random
 import re
+import signal
 import sys
 import time
 
@@ -122,15 +124,28 @@ class InstagramBot:
             self.session_2 = requests.Session()
 
             self.login()
+            self.set_blacked_list_user_dict()
             self.media_manager = MediaManager(self)
             self.insta_explorer = Explorer(self)
+            self.insta_explorer.populate_user_blacklist()
             self.like_manager = LikeManager(self)
             self.comment_manager = CommentManager(self)
             self.follow_manager = FollowManager(self)
             self.unfollow_manager = UnfollowManager(self)
 
+            signal.signal(signal.SIGINT, self.stop_bot)
+            signal.signal(signal.SIGTERM, self.stop_bot)
+            atexit.register(self.stop_bot)
+
         except User.DoesNotExist as e:
             self.logger.error('User does not exist', str(e))
+
+    def set_blacked_list_user_dict(self):
+        blacked_listed_users_obj = self.user_instance.blacklisted_users.all()
+
+        if len(blacked_listed_users_obj):
+            for user in blacked_listed_users_obj:
+                self.user_blacklist[user.username] = ''
 
     def login(self):
 
@@ -339,7 +354,7 @@ class InstagramBot:
                 print('Problem with internet connectivity')
         else:
             self.logger.error("Login error! Connection error!")
-        print("Login error! Connection error!")
+            print("Login error! Connection error!")
 
     def check_and_insert_user_agent(self, user_agent):
         try:
@@ -399,34 +414,101 @@ class InstagramBot:
         self.logger.info("Exit Program... GoodBye")
         sys.exit(0)
 
-    # def stop_bot(self):
-    #     # Unfollow all bot follow
-    #     if self.follow_counter >= self.unfollow_counter:
-    #         for i in range(len(self.bot_follow_list)):
-    #             f = self.bot_follow_list[0]
-    #             if check_already_unfollowed(self, f[0]):
-    #                 log_string = "Already unfollowed before, skipping: %s" % (f[0])
-    #                 self.logger.info(log_string)
-    #             else:
-    #                 log_string = "Trying to unfollow: %s" % (f[0])
-    #                 self.logger.info(log_string)
-    #                 self.unfollow_on_cleanup(f[0])
-    #                 sleeptime = random.randint(
-    #                     self.configurations.unfollow_break_min, self.configurations.unfollow_break_max
-    #                 )
-    #                 log_string = "Pausing for %i seconds... %i of %i" % (
-    #                     sleeptime,
-    #                     self.unfollow_counter,
-    #                     self.follow_counter,
-    #                 )
-    #                 self.write_log(log_string)
-    #                 time.sleep(sleeptime)
-    #             self.bot_follow_list.remove(f)
-    #
-    #     # Logout
-    #     if self.login_status and self.session_file is None:
-    #         self.logout()
-    #     self.prog_run = False
+    def stop_bot(self, *_):
+        # Unfollow all bot follow
+        print("stopping bot", self.follow_counter >= self.unfollow_counter)
+        if self.follow_counter >= self.unfollow_counter:
+            for i in range(len(self.bot_follow_list)):
+                f = self.bot_follow_list[0]
+                if self.unfollow_manager.check_already_unfollowed(f[0]):
+                    log_string = "Already unfollowed before, skipping: %s" % (f[0])
+                    self.logger.info(log_string)
+                    self.send_to_socket(log_string)
+                else:
+                    log_string = "Trying to unfollow: %s" % (f[0])
+                    self.logger.info(log_string)
+                    self.unfollow_on_cleanup(f[0])
+                    sleeptime = random.randint(
+                        self.configurations.unfollow_break_min, self.configurations.unfollow_break_max
+                    )
+                    log_string = "Pausing for %i seconds... %i of %i" % (
+                        sleeptime,
+                        self.unfollow_counter,
+                        self.follow_counter,
+                    )
+                    self.logger.info(log_string)
+                    self.send_to_socket(log_string)
+                    time.sleep(sleeptime)
+                self.bot_follow_list.remove(f)
+
+        # Logout
+        if self.login_status and self.session_file is None:
+            self.logout()
+        self.prog_run = False
+
+    def logout(self):
+        now_time = datetime.datetime.now()
+        # TODO: Matintain copy of session stat in db
+        log_string = (
+                "Logout: likes - %i, follow - %i, unfollow - %i, comments - %i."
+                % (
+                    self.like_counter,
+                    self.follow_counter,
+                    self.unfollow_counter,
+                    self.comments_counter,
+                )
+        )
+        self.logger.info(log_string)
+        work_time = time.time() - self.bot_start_time
+        log_string = f"Bot work time: {work_time}"
+        self.logger.info(log_string)
+        self.send_to_socket(log_string)
+
+        try:
+            logout_post = {"csrfmiddlewaretoken": self.csrftoken}
+            logout = self.session_1.post(self.url_logout, data=logout_post)
+            self.logger.info("Logout success!")
+            self.send_to_socket(log_string)
+            self.login_status = False
+        except Exception as e:
+            self.logger.exception("Logout error! " + str(e))
+
+    def unfollow_on_cleanup(self, user_id):
+        """ Unfollow on cleanup by @rjmayott """
+        if self.login_status:
+            url_unfollow = self.url_unfollow % user_id
+            try:
+                unfollow = self.session_1.post(url_unfollow)
+                if unfollow.status_code == 200:
+                    self.unfollow_counter += 1
+                    log_string = f"Unfollow: {user_id} #{self.unfollow_counter} of {self.follow_counter}."
+                    self.logger.info(log_string)
+                    self.send_to_socket(log_string)
+                    self.unfollow_manager.update_unfollow_count(user_id=user_id)
+                else:
+                    log_string = (
+                        "Slow Down - Pausing for 5 minutes to avoid getting banned"
+                    )
+                    self.logger.info(log_string)
+                    self.send_to_socket(log_string)
+                    time.sleep(300)
+                    unfollow = self.session_1.post(url_unfollow)
+                    if unfollow.status_code == 200:
+                        self.unfollow_counter += 1
+                        log_string = f"Unfollow: {user_id} #{self.unfollow_counter} of {self.follow_counter}."
+                        self.logger.info(log_string)
+                        self.send_to_socket(log_string)
+                        self.unfollow_manager.update_unfollow_count(user_id=user_id)
+                    else:
+                        log_string = "Still no good :( Skipping and pausing for another 5 minutes"
+                        self.logger.info(log_string)
+                        self.send_to_socket(log_string)
+                        time.sleep(300)
+                    return False
+                return unfollow
+            except Exception as e:
+                self.logger.exception("Except on unfollow. " + str(e))
+        return False
 
     def send_to_socket(self, message):
         layer = get_channel_layer()

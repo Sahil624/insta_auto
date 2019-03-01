@@ -17,6 +17,8 @@ class Media(models.Model):
     status = models.IntegerField()
     date_time = models.DateTimeField()
     code = models.CharField(max_length=100)
+    url = models.URLField(blank=True, null=True)
+    media_owner = models.CharField(max_length=300, blank=True, null=True)
     comment = models.CharField(max_length=200, blank=True, null=True)
 
     def __str__(self):
@@ -31,3 +33,10 @@ class InteractedUser(models.Model):
 
     def __str__(self):
         return self.user_name
+
+
+class BlackListedUser(models.Model):
+    username = models.CharField(max_length=300)
+
+    def __str__(self):
+        return self.username

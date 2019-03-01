@@ -3,6 +3,7 @@ import random
 from django.core.management import BaseCommand
 
 from bot.core.bot_service import InstagramBot
+from bot.models import Media
 
 
 class Command(BaseCommand):
@@ -11,6 +12,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('username', type=str, help='Username of test account')
         parser.add_argument('password', type=str, help='Password of test account')
+        parser.add_argument('option', type=int, help="Option for test type", nargs='?', default=None)
 
     def handle(self, *args, **kwargs):
         user_name = kwargs['username']
@@ -24,7 +26,10 @@ class Command(BaseCommand):
         print('bot created', bot.login_status, bot.user_id)
 
         if bot.login_status:
-            option = self.option_prompt()
+            if kwargs['option']:
+                option = kwargs['option']
+            else:
+                option = self.option_prompt()
 
             if option is 1:
                 self.get_media_by_tag(bot)
@@ -52,11 +57,14 @@ class Command(BaseCommand):
             if option is 7:
                 self.test_unfollow(bot)
 
+            if option is 8:
+                self.get_media_url_from_id(bot)
+
         else:
             print('Bot failed')
         logger.info('============ TEST BOT LOGS END ===============')
 
-    def test_auto_follow(self,bot):
+    def test_auto_follow(self, bot):
         bot.media_manager.get_media_id_by_tag('test')
         bot.follow_manager.new_auto_mod_follow()
 
@@ -83,10 +91,15 @@ class Command(BaseCommand):
         bot.media_manager.get_media_id_by_tag('test')
         bot.comment_manager.new_auto_mod_comments()
 
-    def test_unfollow(self,bot):
+    def test_unfollow(self, bot):
         bot.media_manager.get_media_id_by_tag('test')
         for i in range(5):
             bot.unfollow_manager.new_auto_mod_unfollow(test_run=True)
+
+    def get_media_url_from_id(self, bot):
+        obj = Media.objects.all()[0]
+        url = bot.media_manager.get_instagram_url_from_media_id(obj.media_id)
+        print(url)
 
     def option_prompt(self):
         option = input('Enter test option avilable tests are :- \n'
@@ -97,5 +110,5 @@ class Command(BaseCommand):
                        '5) Test Auto Follow\n'
                        '6) Test auto comment\n'
                        '7) Test unfollow \n'
-                       '-1) Exit test\n')
+                       '8) Get media url from media id\n')
         return int(option)

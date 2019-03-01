@@ -29,6 +29,11 @@ class User(User):
                                              blank=True,
                                              related_name="commented_media")
 
+    blacklisted_users = models.ManyToManyField("bot.BlackListedUser",
+                                               verbose_name="blacklisted_user",
+                                               blank=True,
+                                               related_name="blacklisted_user")
+
     def get_tag_list(self):
         tag_set = self.tags.all()
         tag_list = []

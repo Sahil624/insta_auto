@@ -28,7 +28,7 @@ class UnfollowManager:
             if InteractedUser.objects.all().count() < 20:
                 log = (
                     f"> Waiting for database to populate before unfollowing (progress "
-                    f"{str(InteractedUser.objects.all().count()(self))} /20)"
+                    f"{str(InteractedUser.objects.all().count())} /20)"
                 )
                 self.logger.info(log)
                 self.send_to_socket(log)
@@ -334,6 +334,15 @@ class UnfollowManager:
             return users[random.randint(0, len(users))]
 
         return None
+
+    def check_already_unfollowed(self, user_id):
+        try:
+            obj = InteractedUser.objects.get(user_id=user_id)
+            if obj.unfollow_count > 0:
+                return True
+            return False
+        except InteractedUser.DoesNotExist:
+            return False
 
     def send_to_socket(self, message):
         layer = get_channel_layer()

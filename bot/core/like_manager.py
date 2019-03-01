@@ -82,7 +82,8 @@ class LikeManager:
                                     self.bot.logger.warning(
                                         f"Not liking media owned by blacklisted user: {blacklisted_user_name}"
                                     )
-                                    self.send_socket_message(f"Not liking media owned by blacklisted user: {blacklisted_user_name}")
+                                    self.send_socket_message(
+                                        f"Not liking media owned by blacklisted user: {blacklisted_user_name}")
                                     return False
                                 if self.bot.media_by_tag[i]["node"]["owner"]["id"] == self.bot.user_id:
                                     self.bot.logger.info("Keep calm - It's your own media ;)")
@@ -121,7 +122,8 @@ class LikeManager:
                                         self.bot.logger.warning(
                                             f"Not liking media with blacklisted tag(s): {matching_tags}"
                                         )
-                                        self.send_socket_message(f"Not liking media with blacklisted tag(s): {matching_tags}")
+                                        self.send_socket_message(
+                                            f"Not liking media with blacklisted tag(s): {matching_tags}")
                                         return False
                             except Exception as e:
                                 self.bot.logger.error("Except on like_all_exist_media")
@@ -160,7 +162,8 @@ class LikeManager:
                                     if self.bot.error_400 >= self.bot.error_400_to_ban:
                                         # Look like you banned!
                                         # TODO: check ban sleep time variable
-                                        self.bot.logger.critical("Looks like got banned. Sleeping for "+ self.bot.ban_sleep_time)
+                                        self.bot.logger.critical(
+                                            "Looks like got banned. Sleeping for " + str(self.bot.ban_sleep_time))
                                         time.sleep(self.bot.ban_sleep_time)
                                     else:
                                         self.bot.error_400 += 1
@@ -199,7 +202,19 @@ class LikeManager:
 
     def add_media(self, media_id, status):
         try:
-            media_obj = Media.objects.create(media_id=media_id, status=status, date_time=timezone.now())
+
+            try:
+                url = self.bot.media_manager.get_instagram_url_from_media_id(media_id)
+            except:
+                url = None
+
+            try:
+                owner = self.bot.medial_manager.get_username_by_media_id(media_id)
+            except:
+                owner = None
+
+            media_obj = Media.objects.create(media_id=media_id, status=status, date_time=timezone.now(),
+                                             media_owner=owner, url=url)
             if status is '200':
                 self.bot.user_instance.liked_media.add(media_obj)
         except Exception as e:
@@ -269,7 +284,7 @@ class LikeManager:
                 unlike = 0
             return unlike
 
-    def update_media_complete(self,media_id):
+    def update_media_complete(self, media_id):
         try:
             media = Media.objects.get(media_id=media_id)
             media.status = '201'
@@ -277,12 +292,12 @@ class LikeManager:
 
         except Media.DoesNotExist:
             self.bot.logger.exception("Exception in updating media with media id"
-                                      + media_id+" Does not exist")
+                                      + media_id + " Does not exist")
 
     def send_socket_message(self, message):
         async_to_sync(self.layer.group_send)(self.socket_group,
-                                                 {
-                                                     'type': 'log_message',
-                                                     'message': message
-                                                 },
+                                             {
+                                                 'type': 'log_message',
+                                                 'message': message
+                                             },
                                              )
