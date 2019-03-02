@@ -119,8 +119,13 @@ class FollowManager:
             try:
                 follow = self.bot.session_1.post(url_follow)
                 if follow.status_code == 200 and username:
-                    # TODO: update in models
                     self.bot.follow_counter += 1
+                    self.bot.follow_counter += 1
+                    try:
+                        self.bot.bot_session.follow_counter += 1
+                        self.bot.bot_session.save()
+                    except Exception as e:
+                        self.logger.exception('Exception in updating follow counter' + str(e))
                     log_string = f"Followed: {user_id} #{self.bot.follow_counter}."
                     self.logger.info(log_string)
                     self.send_to_socket(log_string)
@@ -142,7 +147,7 @@ class FollowManager:
 
     def send_to_socket(self, message):
         layer = get_channel_layer()
-        async_to_sync(layer.group_send)('log_'+ self.bot.user_instance.username,
+        async_to_sync(layer.group_send)('log_' + self.bot.user_instance.username,
                                         {
                                             'type': 'log_message',
                                             'message': message

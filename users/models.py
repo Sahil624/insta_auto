@@ -5,8 +5,10 @@ import os
 from django.contrib.auth.models import User
 from django.db import models
 
-
 # Create your models here.
+from django.utils import timezone
+
+from users.utils import generate_random_token, N
 
 
 class User(User):
@@ -33,6 +35,11 @@ class User(User):
                                                verbose_name="blacklisted_user",
                                                blank=True,
                                                related_name="blacklisted_user")
+
+    whitelisted_users = models.ManyToManyField("bot.WhiteListedUser",
+                                               verbose_name="whitelisted_user",
+                                               blank=True,
+                                               related_name="whitelisted_user")
 
     def get_tag_list(self):
         tag_set = self.tags.all()
@@ -89,7 +96,7 @@ class Configuration(models.Model):
     media_max_like = models.IntegerField(default=150)
     media_min_like = models.IntegerField(default=0)
     user_max_follow = models.IntegerField(blank=True, null=True)
-    unlike_per_day = models.IntegerField(blank=True, null= True, default=0)
+    unlike_per_day = models.IntegerField(blank=True, null=True, default=0)
     time_till_unlike = models.IntegerField(default=3 * 24 * 60 * 60)
     user_min_follow = models.IntegerField(blank=True, null=True)
     proxy = models.CharField(max_length=50, default="", blank=True, null=True)
@@ -101,6 +108,33 @@ class Configuration(models.Model):
 class Session(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     session_string = models.CharField(max_length=10000)
+
+
+class WebSocketToken(models.Model):
+    user = models.OneToOneField("User",
+                                related_name="websocket_token",
+                                unique=True, on_delete=models.CASCADE,
+                                verbose_name='websocket_token')
+    token = models.CharField(max_length=N, default=generate_random_token())
+    creation_time = models.DateTimeField(auto_created=True, auto_now=True)
+
+    def __str__(self):
+        return self.user.username + " | " + self.token[-6:]
+
+    @staticmethod
+    def validate(token):
+        try:
+            token_obj = WebSocketToken.objects.get(token=token)
+
+            if (datetime.datetime.now() - token_obj.creation_time.replace(tzinfo=None)).seconds > 300:
+                token_obj.delete()
+                return False
+            username = token_obj.user.username
+            token_obj.delete()
+            return username
+
+        except WebSocketToken.DoesNotExist:
+            return False
 
 
 class InstaAccount(models.Model):

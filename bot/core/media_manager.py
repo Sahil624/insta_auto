@@ -7,7 +7,8 @@ from channels.layers import get_channel_layer
 class MediaManager:
 
     def __init__(self, bot):
-        bot.logger.debug('Initalizing media manager for ', bot.user_instance.username, 'with login status', bot.login_status)
+        bot.logger.debug('Initalizing media manager for ', bot.user_instance.username, 'with login status',
+                         bot.login_status)
         self.bot = bot
 
     def get_media_id_by_tag(self, tag):
@@ -75,7 +76,6 @@ class MediaManager:
 
     def get_username_by_media_id(self, media_id):
         """ Get username by media ID Thanks to Nikished """
-
         if self.bot.login_status:
             if self.bot.login_status == 1:
                 media_id_url = self.get_instagram_url_from_media_id(
@@ -89,25 +89,16 @@ class MediaManager:
                     username = str(
                         all_data["graphql"]["shortcode_media"]["owner"]["username"]
                     )
-                    print(
-                        "media_id="
-                        + media_id
-                        + ", media_id_url="
-                        + media_id_url
-                        + ", username_by_media_id="
-                        + username
-                    )
                     return username
                 except Exception as e:
                     self.bot.logger.error('username_by_mediaid exception' + str(e))
-                    print("username_by_mediaid exception")
                     return False
             else:
                 return ""
 
     def send_to_socket(self, message):
         layer = get_channel_layer()
-        async_to_sync(layer.group_send)('log_'+ self.bot.user_instance.username,
+        async_to_sync(layer.group_send)('log_' + self.bot.user_instance.username,
                                         {
                                             'type': 'log_message',
                                             'message': message

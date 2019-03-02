@@ -87,7 +87,7 @@ class UnfollowManager:
     def get_media_id_recent_feed(self):
         if self.bot.login_status:
             now_time = datetime.datetime.now()
-            log_string = f"{self.bot.user_login} : Get media id on recent feed"
+            log_string = f"{self.bot.user_instance.username} : Get media id on recent feed"
             self.logger.info(log_string)
             self.send_to_socket(log_string)
             if self.bot.login_status == 1:
@@ -285,6 +285,12 @@ class UnfollowManager:
                 unfollow = self.bot.session_1.post(url_unfollow)
                 if unfollow.status_code == 200:
                     self.bot.unfollow_counter += 1
+                    try:
+                        self.bot.bot_session.unfollow_counter += 1
+                        self.bot.bot_session.save()
+                    except Exception as e:
+                        self.logger.exception("Exception in updating unfollow counter" + str(e))
+                        
                     log_string = f"Unfollowed: {user_id} #{self.bot.unfollow_counter}."
                     self.logger.info(log_string)
                     self.send_to_socket(log_string)

@@ -22,11 +22,14 @@ class Media(models.Model):
     comment = models.CharField(max_length=200, blank=True, null=True)
 
     def __str__(self):
-        return self.media_id
+        show_string = self.media_id
+        if self.media_owner:
+            show_string = self.media_owner + " | " + self.media_id[-8:]
+        return show_string
 
 
 class InteractedUser(models.Model):
-    user_id = models.IntegerField()
+    user_id = models.BigIntegerField()
     user_name = models.CharField(max_length=500)
     unfollow_count = models.IntegerField(default=0)
     last_followed_time = models.DateTimeField()
@@ -40,3 +43,27 @@ class BlackListedUser(models.Model):
 
     def __str__(self):
         return self.username
+
+
+class WhiteListedUser(models.Model):
+    username = models.CharField(max_length=300)
+
+    def __str__(self):
+        return self.username
+
+
+class BotSession(models.Model):
+    user = models.ForeignKey("users.User",
+                             related_name='session_user',
+                             related_query_name='session_user',
+                             on_delete=models.CASCADE)
+    bot_creation_time = models.DateTimeField(auto_now_add=True)
+    unfollow_counter = models.IntegerField(default=0)
+    follow_counter = models.IntegerField(default=0)
+    like_counter = models.IntegerField(default=0)
+    comments_counter = models.IntegerField(default=0)
+    bot_start_time = models.DateTimeField(blank=True, null=True)
+    bot_stop_time = models.DateTimeField(blank=True, null=True)
+
+    def __str__(self):
+        return self.user.username + " | " + str(self.bot_creation_time)

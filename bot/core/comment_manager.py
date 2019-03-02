@@ -178,6 +178,11 @@ class CommentManager:
                         owner = None
 
                     self.bot.comments_counter += 1
+                    try:
+                        self.bot.bot_session.comments_counter += 1
+                        self.bot.bot_session.save()
+                    except Exception as e:
+                        self.logger.exception("Exception in updating comments counter in session " + str(e))
                     log_string = f"Write: {comment_text}. #{self.bot.comments_counter}."
                     try:
 

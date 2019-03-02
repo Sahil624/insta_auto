@@ -12,6 +12,7 @@ import fake_useragent
 import requests
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.utils import timezone
 from instaloader import instaloader
 
 from bot.consts import LIST_OF_FAKE_UA
@@ -22,7 +23,7 @@ from bot.core.like_manager import LikeManager
 from bot.core.media_manager import MediaManager
 from bot.core.unfollow_manager import UnfollowManager
 from bot.core.user_info import UserInfo
-from bot.models import FakeUA
+from bot.models import FakeUA, WhiteListedUser, BotSession
 from users.models import User
 
 
@@ -57,7 +58,7 @@ class InstagramBot:
     media_by_tag = []
     user_blacklist = {}
     this_tag_like_count = 0
-    # TODO: Add to model
+    bot_run_time = None
     unfollow_whitelist = [],
     comments_counter = 0
     max_like_for_one_tag = 0
@@ -68,7 +69,7 @@ class InstagramBot:
     error_400 = 0
     # If you have 3 400 error in row - looks like you banned.
     error_400_to_ban = 3
-    # If InstaBot think you are banned - going to sleep.
+    # If InstaBot think you are     banned - going to sleep.
     ban_sleep_time = 3 * 60 * 60
 
     next_iteration = {
@@ -100,7 +101,13 @@ class InstagramBot:
 
             self.instaloader = instaloader.Instaloader()
             self.time_in_day = 24 * 60 * 60
+            self.unfollow_whitelist = list(WhiteListedUser.objects.values_list('username', flat=True))
             self.like_delay = self.time_in_day / self.configurations.likes_per_day
+
+            try:
+                self.bot_session = BotSession.objects.create(user=self.user_instance, bot_creation_time=timezone.now())
+            except Exception as e:
+                self.logger.exception('Exception in adding bot session in model' + str(e))
 
             self.unlike_per_day = self.configurations.unlike_per_day
             if self.configurations.unlike_per_day and self.configurations.unlike_per_day != 0:
@@ -372,11 +379,21 @@ class InstagramBot:
     def run_bot(self):
         while self.prog_run and self.login_status:
             now = datetime.datetime.now()
+            self.bot_run_time = timezone.now()
+            self.bot_session.bot_start_time = self.bot_run_time
+            self.bot_session.save()
             if (not self.configurations.start_time or self.configurations.start_time <= now.time()) and (
                     not self.configurations.ends_time or self.configurations.ends_time >= now.time()):
                 # ------------------- Get media_id -------------------
                 if len(self.media_by_tag) == 0:
-                    self.media_manager.get_media_id_by_tag(random.choice(self.user_instance.get_tag_list()))
+                    if len(self.user_instance.get_tag_list()):
+                        self.media_manager.get_media_id_by_tag(random.choice(self.user_instance.get_tag_list()))
+                    else:
+                        log = "Please specify atleast one tag for searching media"
+                        self.logger.error(log)
+                        self.send_to_socket(log)
+                        self.stop_bot(None)
+
                     self.this_tag_like_count = 0
                     self.max_tag_like_count = random.randint(
                         1, self.configurations.max_like_for_one_tag
@@ -442,13 +459,19 @@ class InstagramBot:
                 self.bot_follow_list.remove(f)
 
         # Logout
+        print("will logout", self.login_status and self.session_file is None)
         if self.login_status and self.session_file is None:
             self.logout()
         self.prog_run = False
 
+        try:
+            self.bot_session.bot_stop_time = timezone.now()
+            self.bot_session.save()
+        except Exception as e:
+            self.logger.exception("Exception in updating bot stop time in session " + str(e))
+
     def logout(self):
         now_time = datetime.datetime.now()
-        # TODO: Matintain copy of session stat in db
         log_string = (
                 "Logout: likes - %i, follow - %i, unfollow - %i, comments - %i."
                 % (
@@ -459,6 +482,7 @@ class InstagramBot:
                 )
         )
         self.logger.info(log_string)
+        self.send_to_socket(log_string)
         work_time = time.time() - self.bot_start_time
         log_string = f"Bot work time: {work_time}"
         self.logger.info(log_string)
@@ -481,6 +505,11 @@ class InstagramBot:
                 unfollow = self.session_1.post(url_unfollow)
                 if unfollow.status_code == 200:
                     self.unfollow_counter += 1
+                    try:
+                        self.bot_session.unfollow_counter += 1
+                        self.bot_session.save()
+                    except Exception as e:
+                        self.logger.exception("Exception in updating unfollow counter" + str(e))
                     log_string = f"Unfollow: {user_id} #{self.unfollow_counter} of {self.follow_counter}."
                     self.logger.info(log_string)
                     self.send_to_socket(log_string)
@@ -495,6 +524,11 @@ class InstagramBot:
                     unfollow = self.session_1.post(url_unfollow)
                     if unfollow.status_code == 200:
                         self.unfollow_counter += 1
+                        try:
+                            self.bot_session.unfollow_counter += 1
+                            self.bot_session.save()
+                        except Exception as e:
+                            self.logger.exception("Exception in updating unfollow counter" + str(e))
                         log_string = f"Unfollow: {user_id} #{self.unfollow_counter} of {self.follow_counter}."
                         self.logger.info(log_string)
                         self.send_to_socket(log_string)

@@ -73,7 +73,6 @@ class LikeManager:
                                 or (
                                 self.bot.configurations.media_min_like == 0 and self.bot.configurations.media_max_like == 0)
                         ):
-                            # TODO: Move black list user to models
                             for (
                                     blacklisted_user_name,
                                     blacklisted_user_id,
@@ -88,7 +87,7 @@ class LikeManager:
                                 if self.bot.media_by_tag[i]["node"]["owner"]["id"] == self.bot.user_id:
                                     self.bot.logger.info("Keep calm - It's your own media ;)")
                                     self.send_socket_message("Keep calm - It's your own media ;)")
-                                return False
+                                    return False
 
                             if self.check_already_liked(media_id=self.bot.media_by_tag[i]["node"]["id"]):
                                 self.bot.logger.info("Keep calm - It's already liked ;)")
@@ -141,13 +140,17 @@ class LikeManager:
                                     # Like, all ok!
                                     self.bot.error_400 = 0
                                     self.bot.like_counter += 1
-                                    # TODO: update log counter
+                                    try:
+                                        self.bot.bot_session.like_counter += 1
+                                        self.bot.bot_session.save()
+                                    except Exception as e:
+                                        self.bot.logger.exception('Exception in updating like counter' + str(e))
                                     log_string = f"Liked: {self.bot.media_by_tag[i]['node']['id']}." \
                                         f"Like #{self.bot.like_counter}."
 
                                     self.send_socket_message(log_string)
-                                    self.add_media(media_id=self.bot.media_by_tag[i]["node"]["id"], status='200')
                                     self.bot.logger.info(log_string)
+                                    self.add_media(media_id=self.bot.media_by_tag[i]["node"]["id"], status='200')
 
                                 elif like.status_code == 400:
                                     log_string = f"Not liked: {like.status_code} : 400 like till now {self.bot.error_400}"
@@ -158,10 +161,8 @@ class LikeManager:
                                     )
                                     self.send_socket_message(log_string)
                                     # Some error. If repeated - can be ban!
-                                    # TODO: confirm this logic
                                     if self.bot.error_400 >= self.bot.error_400_to_ban:
                                         # Look like you banned!
-                                        # TODO: check ban sleep time variable
                                         self.bot.logger.critical(
                                             "Looks like got banned. Sleeping for " + str(self.bot.ban_sleep_time))
                                         time.sleep(self.bot.ban_sleep_time)
@@ -209,8 +210,8 @@ class LikeManager:
                 url = None
 
             try:
-                owner = self.bot.medial_manager.get_username_by_media_id(media_id)
-            except:
+                owner = self.bot.media_manager.get_username_by_media_id(media_id)
+            except Exception as e:
                 owner = None
 
             media_obj = Media.objects.create(media_id=media_id, status=status, date_time=timezone.now(),
@@ -222,7 +223,6 @@ class LikeManager:
 
     def like(self, media_id):
         """ Send http request to like media by ID """
-        print("Liking media id", media_id)
         if self.bot.login_status:
             url_likes = self.bot.url_likes % media_id
             try:
