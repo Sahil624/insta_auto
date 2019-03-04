@@ -93,3 +93,4 @@ migrations/
 .idea
 
 config.py
+logs

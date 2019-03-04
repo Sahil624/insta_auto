@@ -290,7 +290,7 @@ class UnfollowManager:
                         self.bot.bot_session.save()
                     except Exception as e:
                         self.logger.exception("Exception in updating unfollow counter" + str(e))
-                        
+
                     log_string = f"Unfollowed: {user_id} #{self.bot.unfollow_counter}."
                     self.logger.info(log_string)
                     self.send_to_socket(log_string)
@@ -336,8 +336,8 @@ class UnfollowManager:
         cut_off_time = now_time - timezone.timedelta(seconds=self.bot.configurations.follow_time)
         users = InteractedUser.objects.filter(last_followed_time__lte=cut_off_time, unfollow_count=0)
 
-        if len(users):
-            return users[random.randint(0, len(users))]
+        if len(users) > 1:
+            return users[random.randint(0, len(users) - 1)]
 
         return None
 

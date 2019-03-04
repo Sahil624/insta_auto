@@ -12,6 +12,7 @@ import fake_useragent
 import requests
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.contrib.auth.models import User
 from django.utils import timezone
 from instaloader import instaloader
 
@@ -24,7 +25,6 @@ from bot.core.media_manager import MediaManager
 from bot.core.unfollow_manager import UnfollowManager
 from bot.core.user_info import UserInfo
 from bot.models import FakeUA, WhiteListedUser, BotSession
-from users.models import User
 
 
 class InstagramBot:
@@ -84,7 +84,12 @@ class InstagramBot:
     def __init__(self, login, password):
         try:
 
-            self.user_instance = User.objects.get(username=login)
+            self.user = User.objects.get(username=login)
+            if self.user.user_profile:
+                self.user_instance = self.user.user_profile
+            else:
+                raise Exception('User Profile does not exist')
+
             self.password = password
             self.logger = self.user_instance.get_user_logger()
             self.configurations = self.user_instance.configuration
@@ -105,9 +110,10 @@ class InstagramBot:
             self.like_delay = self.time_in_day / self.configurations.likes_per_day
 
             try:
-                self.bot_session = BotSession.objects.create(user=self.user_instance, bot_creation_time=timezone.now())
+                self.bot_session = BotSession.objects.create(user=self.user, bot_creation_time=timezone.now())
             except Exception as e:
-                self.logger.exception('Exception in adding bot session in model' + str(e))
+                print('Exception in adding bot session in model' + str(e))
+                return
 
             self.unlike_per_day = self.configurations.unlike_per_day
             if self.configurations.unlike_per_day and self.configurations.unlike_per_day != 0:
@@ -146,6 +152,9 @@ class InstagramBot:
 
         except User.DoesNotExist as e:
             self.logger.error('User does not exist', str(e))
+
+        except Exception as e:
+            print(e)
 
     def set_blacked_list_user_dict(self):
         blacked_listed_users_obj = self.user_instance.blacklisted_users.all()
@@ -365,10 +374,10 @@ class InstagramBot:
 
     def check_and_insert_user_agent(self, user_agent):
         try:
-            fake_agent = FakeUA.objects.filter(user=self.user_instance)
+            fake_agent = FakeUA.objects.filter(user=self.user)
             if len(fake_agent) is 0:
                 self.logger.info('Created Fake UA')
-                FakeUA.objects.create(fake_user_agent=user_agent, user=self.user_instance)
+                FakeUA.objects.create(fake_user_agent=user_agent, user=self.user)
                 return user_agent
             else:
                 return fake_agent[0].fake_user_agent
@@ -399,6 +408,7 @@ class InstagramBot:
                         1, self.configurations.max_like_for_one_tag
                     )
                     self.like_manager.remove_already_liked()
+                print("GO FOR LIKE")
                 # ------------------- Like -------------------
                 self.like_manager.new_auto_mod_like()
                 # ------------------- Unlike -------------------

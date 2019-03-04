@@ -21,9 +21,10 @@ class Command(BaseCommand):
         print(user_name, password)
 
         bot = InstagramBot(user_name, password)
+        print('bot created', bot.login_status, bot.user_id)
+
         logger = bot.user_instance.get_user_logger()
         logger.info('============ TEST BOT LOGS ===============')
-        print('bot created', bot.login_status, bot.user_id)
 
         if bot.login_status:
             if kwargs['option']:

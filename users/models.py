@@ -1,20 +1,24 @@
+import binascii
 import datetime
 import logging
 import os
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser, User
 from django.db import models
+from django.utils.translation import ugettext_lazy as _
 
-# Create your models here.
-from django.utils import timezone
+from rest_framework.authtoken.models import Token
 
 from users.utils import generate_random_token, N
 
 
-class User(User):
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="user_profile")
     tags = models.ManyToManyField("Tag", blank=True)
-    configuration = models.ForeignKey("Configuration",
+    configuration = models.ForeignKey("users.Configuration",
+                                      blank=True, null=True,
                                       verbose_name="config",
+                                      related_name='config',
                                       on_delete=models.CASCADE
                                       )
     liked_media = models.ManyToManyField("bot.Media",
@@ -50,11 +54,11 @@ class User(User):
 
     def get_user_logger(self):
         try:
-            os.makedirs('logs/' + self.username)
+            os.makedirs('logs/' + self.user.username)
         except FileExistsError:
             pass
 
-        file_name = 'logs/' + self.username + '/' + self.username + '-' + str(datetime.date.today()) + '.log'
+        file_name = 'logs/' + self.user.username + '/' + self.user.username + '-' + str(datetime.date.today()) + '.log'
 
         """Function setup as many loggers as you want"""
         formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
@@ -62,14 +66,18 @@ class User(User):
         handler.setFormatter(formatter)
         handler.setLevel(logging.INFO)
 
-        logger = logging.getLogger(self.username + '.logs')
+        logger = logging.getLogger(self.user.username + '.logs')
         logger.setLevel(logging.DEBUG)
         logger.addHandler(handler)
 
         return logger
 
+    @property
+    def username(self):
+        return self.user.username
+
     def __str__(self):
-        return self.username
+        return self.user.username
 
 
 class Tag(models.Model):
@@ -111,15 +119,20 @@ class Session(models.Model):
 
 
 class WebSocketToken(models.Model):
-    user = models.OneToOneField("User",
+    user = models.OneToOneField(User,
                                 related_name="websocket_token",
                                 unique=True, on_delete=models.CASCADE,
                                 verbose_name='websocket_token')
-    token = models.CharField(max_length=N, default=generate_random_token())
+    token = models.CharField(max_length=N, blank=True, null=True)
     creation_time = models.DateTimeField(auto_created=True, auto_now=True)
 
     def __str__(self):
         return self.user.username + " | " + self.token[-6:]
+
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = generate_random_token()
+        super(WebSocketToken, self).save(*args, **kwargs)
 
     @staticmethod
     def validate(token):
