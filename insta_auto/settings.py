@@ -26,7 +26,11 @@ SECRET_KEY = 'cq%%@1!jlvy(-@*)f(1uw%)gx0jijrvd9#mckmpej8-7*#y(n&'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+  'python-2fa31941.codeanyapp.com'
+]
+
+AUTH_USER_MODEL = "accounts.User"
 
 # Application definition
 
@@ -40,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
+    'accounts',
     'users',
     'bot',
 ]
@@ -87,18 +92,18 @@ WSGI_APPLICATION = 'insta_auto.wsgi.application'
 
 DATABASES = {
     # Uncomment for using postgres and add DB data to config.py
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': DB_NAME,
+#         'USER': DB_USER,
+#         'PASSWORD': POSTGRES_PASSWORD,
+#         'HOST': POSTGRES_URL,
+#         'PORT': DB_PORT,
+#     },
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': DB_NAME,
-        'USER': DB_USER,
-        'PASSWORD': POSTGRES_PASSWORD,
-        'HOST': POSTGRES_URL,
-        'PORT': DB_PORT,
-    },
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    # }
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
 }
 
 # Password validation

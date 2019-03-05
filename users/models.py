@@ -6,6 +6,7 @@ import os
 from django.contrib.auth.models import AbstractUser, User
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
+from django.conf import settings
 
 from rest_framework.authtoken.models import Token
 
@@ -13,7 +14,7 @@ from users.utils import generate_random_token, N
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="user_profile")
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user_profile")
     tags = models.ManyToManyField("Tag", blank=True)
     configuration = models.ForeignKey("users.Configuration",
                                       blank=True, null=True,
@@ -114,12 +115,12 @@ class Configuration(models.Model):
 
 
 class Session(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     session_string = models.CharField(max_length=10000)
 
 
 class WebSocketToken(models.Model):
-    user = models.OneToOneField(User,
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
                                 related_name="websocket_token",
                                 unique=True, on_delete=models.CASCADE,
                                 verbose_name='websocket_token')
@@ -151,7 +152,7 @@ class WebSocketToken(models.Model):
 
 
 class InstaAccount(models.Model):
-    user = models.ForeignKey(User,
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
                              on_delete=models.CASCADE,
                              related_name='insta_account')
     insta_user_id = models.IntegerField(blank=True, null=True)
