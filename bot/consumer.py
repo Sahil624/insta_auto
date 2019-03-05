@@ -1,7 +1,7 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
 
-from users.models import WebSocketToken
+from users_profile.models import WebSocketToken
 
 
 class LogConsumer(AsyncWebsocketConsumer):

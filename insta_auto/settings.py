@@ -28,6 +28,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+AUTH_USER_MODEL = "accounts.User"
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -40,7 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
-    'users',
+    'accounts',
+    'users_profile',
     'bot',
 ]
 
@@ -53,7 +56,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
 
 ROOT_URLCONF = 'insta_auto.urls'
 
@@ -87,14 +89,14 @@ WSGI_APPLICATION = 'insta_auto.wsgi.application'
 
 DATABASES = {
     # Uncomment for using postgres and add DB data to config.py
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': DB_NAME,
-        'USER': DB_USER,
-        'PASSWORD': POSTGRES_PASSWORD,
-        'HOST': POSTGRES_URL,
-        'PORT': DB_PORT,
-    },
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': DB_NAME,
+            'USER': DB_USER,
+            'PASSWORD': POSTGRES_PASSWORD,
+            'HOST': POSTGRES_URL,
+            'PORT': DB_PORT,
+        },
     # 'default': {
     #     'ENGINE': 'django.db.backends.sqlite3',
     #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
