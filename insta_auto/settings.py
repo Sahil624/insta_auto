@@ -26,9 +26,7 @@ SECRET_KEY = 'cq%%@1!jlvy(-@*)f(1uw%)gx0jijrvd9#mckmpej8-7*#y(n&'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-  'python-2fa31941.codeanyapp.com'
-]
+ALLOWED_HOSTS = []
 
 AUTH_USER_MODEL = "accounts.User"
 
@@ -45,7 +43,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'accounts',
-    'users',
+    'users_profile',
     'bot',
 ]
 
@@ -58,7 +56,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
 
 ROOT_URLCONF = 'insta_auto.urls'
 
@@ -92,18 +89,18 @@ WSGI_APPLICATION = 'insta_auto.wsgi.application'
 
 DATABASES = {
     # Uncomment for using postgres and add DB data to config.py
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': DB_NAME,
-#         'USER': DB_USER,
-#         'PASSWORD': POSTGRES_PASSWORD,
-#         'HOST': POSTGRES_URL,
-#         'PORT': DB_PORT,
-#     },
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': DB_NAME,
+            'USER': DB_USER,
+            'PASSWORD': POSTGRES_PASSWORD,
+            'HOST': POSTGRES_URL,
+            'PORT': DB_PORT,
+        },
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    # }
 }
 
 # Password validation

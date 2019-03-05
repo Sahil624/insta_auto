@@ -1,12 +1,11 @@
 from django.contrib.auth.models import User
 from django.db import models
-from django.conf import settings
 # Create your models here.
-# from users.models import UserModel
+from users_profile.models import UserProfile
 
 
 class FakeUA(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE)
     fake_user_agent = models.CharField(max_length=200)
 
     def __str__(self):
@@ -52,9 +51,9 @@ class WhiteListedUser(models.Model):
     def __str__(self):
         return self.username
 
-#
+
 class BotSession(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+    user = models.ForeignKey(UserProfile,
                              related_name='session_user',
                              related_query_name='session_user',
                              on_delete=models.CASCADE)

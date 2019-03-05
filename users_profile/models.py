@@ -10,13 +10,13 @@ from django.conf import settings
 
 from rest_framework.authtoken.models import Token
 
-from users.utils import generate_random_token, N
+from users_profile.utils import generate_random_token, N
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user_profile")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user_profile")
     tags = models.ManyToManyField("Tag", blank=True)
-    configuration = models.ForeignKey("users.Configuration",
+    configuration = models.ForeignKey("users_profile.Configuration",
                                       blank=True, null=True,
                                       verbose_name="config",
                                       related_name='config',
@@ -115,12 +115,12 @@ class Configuration(models.Model):
 
 
 class Session(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE)
     session_string = models.CharField(max_length=10000)
 
 
 class WebSocketToken(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+    user = models.OneToOneField(UserProfile,
                                 related_name="websocket_token",
                                 unique=True, on_delete=models.CASCADE,
                                 verbose_name='websocket_token')
@@ -149,14 +149,3 @@ class WebSocketToken(models.Model):
 
         except WebSocketToken.DoesNotExist:
             return False
-
-
-class InstaAccount(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             on_delete=models.CASCADE,
-                             related_name='insta_account')
-    insta_user_id = models.IntegerField(blank=True, null=True)
-    last_csrf_token = models.CharField(max_length=1000, blank=True, null=True)
-
-    def __str__(self):
-        return self.user.username
