@@ -1,11 +1,9 @@
-import binascii
 import datetime
 import logging
 import os
 
 from django.contrib.auth.models import AbstractUser, User
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 
 from rest_framework.authtoken.models import Token
@@ -15,6 +13,7 @@ from users_profile.utils import generate_random_token, N
 
 class UserProfile(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user_profile")
+    username = models.CharField(max_length=150, unique=True)
     tags = models.ManyToManyField("Tag", blank=True)
     configuration = models.ForeignKey("users_profile.Configuration",
                                       blank=True, null=True,
@@ -55,11 +54,11 @@ class UserProfile(models.Model):
 
     def get_user_logger(self):
         try:
-            os.makedirs('logs/' + self.user.username)
+            os.makedirs('logs/' + self.username)
         except FileExistsError:
             pass
 
-        file_name = 'logs/' + self.user.username + '/' + self.user.username + '-' + str(datetime.date.today()) + '.log'
+        file_name = 'logs/' + self.username + '/' + self.username + '-' + str(datetime.date.today()) + '.log'
 
         """Function setup as many loggers as you want"""
         formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
@@ -67,18 +66,14 @@ class UserProfile(models.Model):
         handler.setFormatter(formatter)
         handler.setLevel(logging.INFO)
 
-        logger = logging.getLogger(self.user.username + '.logs')
+        logger = logging.getLogger(self.username + '.logs')
         logger.setLevel(logging.DEBUG)
         logger.addHandler(handler)
 
         return logger
 
-    @property
-    def username(self):
-        return self.user.username
-
     def __str__(self):
-        return self.user.username
+        return self.username
 
 
 class Tag(models.Model):

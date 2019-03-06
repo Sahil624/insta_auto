@@ -25,6 +25,7 @@ from bot.core.media_manager import MediaManager
 from bot.core.unfollow_manager import UnfollowManager
 from bot.core.user_info import UserInfo
 from bot.models import FakeUA, WhiteListedUser, BotSession
+from users_profile.models import UserProfile
 
 
 class InstagramBot:
@@ -84,11 +85,8 @@ class InstagramBot:
     def __init__(self, login, password):
         try:
 
-            self.user = User.objects.get(username=login)
-            if self.user.user_profile:
-                self.user_instance = self.user.user_profile
-            else:
-                raise Exception('User Profile does not exist')
+            self.user_instance = UserProfile.objects.get(username=login)
+            self.user = self.user_instance.user
 
             self.password = password
             self.logger = self.user_instance.get_user_logger()
@@ -110,7 +108,7 @@ class InstagramBot:
             self.like_delay = self.time_in_day / self.configurations.likes_per_day
 
             try:
-                self.bot_session = BotSession.objects.create(user=self.user, bot_creation_time=timezone.now())
+                self.bot_session = BotSession.objects.create(user=self.user_instance, bot_creation_time=timezone.now())
             except Exception as e:
                 print('Exception in adding bot session in model' + str(e))
                 return
@@ -408,7 +406,6 @@ class InstagramBot:
                         1, self.configurations.max_like_for_one_tag
                     )
                     self.like_manager.remove_already_liked()
-                print("GO FOR LIKE")
                 # ------------------- Like -------------------
                 self.like_manager.new_auto_mod_like()
                 # ------------------- Unlike -------------------

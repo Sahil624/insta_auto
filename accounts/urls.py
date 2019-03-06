@@ -4,5 +4,6 @@ from accounts import views
 
 urlpatterns = [
     path('login/', obtain_auth_token),
-    path('register/', views.Account().as_view())
+    path('register/', views.Account().as_view()),
+    path('logout/', views.Logout().as_view())
 ]

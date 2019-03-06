@@ -9,8 +9,9 @@ https://docs.djangoproject.com/en/2.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.1/ref/settings/
 """
-
+import datetime
 import os
+import logging
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 from insta_auto.config import *
@@ -78,25 +79,35 @@ TEMPLATES = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
-        # 'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
     )
 }
 
 WSGI_APPLICATION = 'insta_auto.wsgi.application'
 
+try:
+    os.makedirs('logs/server_logs')
+except FileExistsError:
+    pass
+
+logging.basicConfig(filename='logs/server_logs' + str(datetime.date.today()) + '.log',
+                    filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 DATABASES = {
     # Uncomment for using postgres and add DB data to config.py
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': DB_NAME,
-            'USER': DB_USER,
-            'PASSWORD': POSTGRES_PASSWORD,
-            'HOST': POSTGRES_URL,
-            'PORT': DB_PORT,
-        },
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': DB_NAME,
+        'USER': DB_USER,
+        'PASSWORD': POSTGRES_PASSWORD,
+        'HOST': POSTGRES_URL,
+        'PORT': DB_PORT,
+    },
     # 'default': {
     #     'ENGINE': 'django.db.backends.sqlite3',
     #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
