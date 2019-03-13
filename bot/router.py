@@ -1,7 +1,4 @@
 from rest_framework import routers
-
-from bot.views import InteractedUsersViewSet
+from bot import views
 
 router = routers.DefaultRouter()
-
-router.register('interacted_users', InteractedUsersViewSet)
