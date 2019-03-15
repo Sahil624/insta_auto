@@ -372,7 +372,7 @@ class InstagramBot:
 
     def check_and_insert_user_agent(self, user_agent):
         try:
-            fake_agent = FakeUA.objects.filter(user=self.user)
+            fake_agent = FakeUA.objects.filter(user=self.user_instance)
             if len(fake_agent) is 0:
                 self.logger.info('Created Fake UA')
                 FakeUA.objects.create(fake_user_agent=user_agent, user=self.user)
