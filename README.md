@@ -1,4 +1,4 @@
-#Insta Auto
+# Insta Auto
 
 Insta auto is a web based bot written in python (Django). 
 Insta auto interacts with instagram over Http requests using requests library in python.
