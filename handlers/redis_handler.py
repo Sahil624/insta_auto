@@ -8,7 +8,7 @@ class RedisQueue(object):
 
     def __init__(self, name, namespace='queue'):
         """ The default connection parameters are: host='localhost', port=6379, db=0 """
-
+    
         self.__db = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
         self.key = '%s:%s' % (namespace, name)
 

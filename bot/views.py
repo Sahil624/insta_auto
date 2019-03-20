@@ -1,10 +1,7 @@
 import json
 
-from rest_framework import viewsets, status, views
+from rest_framework import status, views
 from rest_framework.response import Response
-import threading
-from bot.core.bot_service import InstagramBot
-
 from bot import models, seralizers
 from handlers.redis_handler import RedisQueue
 from users_profile.models import UserProfile
@@ -16,10 +13,15 @@ class BotSessionsListView(views.APIView):
         try:
             try:
                 id = request.GET['id']
+                page_size = int(request.GET.get('page_size', 5))
+                page_number = int(request.GET.get('page_number', 1))
                 user_profile = UserProfile.objects.get(id=id, user=request.user)
                 objects = models.BotSession.objects.filter(user=user_profile)
+                count = objects.count()
+                objects = objects[(page_number * page_size) - page_size:page_number * page_size]
                 serializer_obj = seralizers.BotSessionSerializer(objects, many=True)
-                return Response(data=dict(data=serializer_obj.data), status=status.HTTP_200_OK)
+                return Response(data=dict(page_number=page_number, page_size=page_size, total_count=count,
+                                          data=serializer_obj.data), status=status.HTTP_200_OK)
 
             except UserProfile.DoesNotExist:
                 return Response(data=dict(error="Invalid Profile"), status=status.HTTP_400_BAD_REQUEST)

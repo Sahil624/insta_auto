@@ -48,9 +48,14 @@ class LikedMediaListView(views.APIView):
     def get(self, request):
         try:
             try:
+                page_size = int(request.GET.get('page_size', 5))
+                page_number = int(request.GET.get('page_number', 1))
                 medias = self.get_objects(request)
+                count = medias.count()
+                medias = medias[(page_number * page_size) - page_size:page_number * page_size]
                 serializer_obj = MediaSerializer(medias, many=True)
-                return Response(data=dict(data=serializer_obj.data), status=status.HTTP_200_OK)
+                return Response(data=dict(page_size=page_size, page_number=page_number, total_count=count,
+                                          data=serializer_obj.data), status=status.HTTP_200_OK)
 
             except models.UserProfile.DoesNotExist:
                 return Response(data=dict(error="Invalid Profile"), status=status.HTTP_400_BAD_REQUEST)
@@ -75,9 +80,14 @@ class FollowedUsers(views.APIView):
         try:
             try:
                 id = request.GET['id']
+                page_size = int(request.GET.get('page_size', 5))
+                page_number = int(request.GET.get('page_number', 1))
                 objects = models.UserProfile.objects.get(id=id, user=request.user).followed_users.all()
+                count = objects.count()
+                objects = objects[(page_number * page_size) - page_size:page_number * page_size]
                 serializer_obj = InteractedUserSerializer(objects, many=True)
-                return Response(data=dict(data=serializer_obj.data), status=status.HTTP_200_OK)
+                return Response(data=dict(page_number=page_number, page_size=page_size, total_count=count,
+                                          data=serializer_obj.data), status=status.HTTP_200_OK)
 
             except models.UserProfile.DoesNotExist:
                 return Response(data=dict(error="Invalid Profile"), status=status.HTTP_400_BAD_REQUEST)

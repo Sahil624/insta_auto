@@ -375,7 +375,7 @@ class InstagramBot:
             fake_agent = FakeUA.objects.filter(user=self.user_instance)
             if len(fake_agent) is 0:
                 self.logger.info('Created Fake UA')
-                FakeUA.objects.create(fake_user_agent=user_agent, user=self.user)
+                FakeUA.objects.create(fake_user_agent=user_agent, user=self.user_instance)
                 return user_agent
             else:
                 return fake_agent[0].fake_user_agent
@@ -505,7 +505,7 @@ class InstagramBot:
             self.logger.exception("Logout error! " + str(e))
 
     def unfollow_on_cleanup(self, user_id):
-        """ Unfollow on cleanup by @rjmayott """
+
         if self.login_status:
             url_unfollow = self.url_unfollow % user_id
             try:

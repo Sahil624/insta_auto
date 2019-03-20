@@ -27,7 +27,9 @@ SECRET_KEY = 'cq%%@1!jlvy(-@*)f(1uw%)gx0jijrvd9#mckmpej8-7*#y(n&'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost'
+]
 
 AUTH_USER_MODEL = "accounts.User"
 
@@ -96,6 +98,10 @@ except FileExistsError:
 
 logging.basicConfig(filename='logs/server_logs' + str(datetime.date.today()) + '.log',
                     filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+
+LOG_LEVEL = logging.INFO
+if not DEBUG:
+    LOG_LEVEL = logging.ERROR
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
@@ -150,6 +156,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = (
+)
 
 # ASGI For channels
 ASGI_APPLICATION = "insta_auto.routing.application"

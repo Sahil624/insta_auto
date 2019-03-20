@@ -6,7 +6,6 @@ from django.contrib.auth.models import AbstractUser, User
 from django.db import models
 from django.conf import settings
 
-
 from users_profile.utils import generate_random_token, N
 
 
@@ -63,13 +62,16 @@ class UserProfile(models.Model):
         formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         handler = logging.FileHandler(filename=file_name)
         handler.setFormatter(formatter)
-        handler.setLevel(logging.INFO)
+        handler.setLevel(settings.LOG_LEVEL)
 
         logger = logging.getLogger(self.username + '.logs')
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(settings.LOG_LEVELs)
         logger.addHandler(handler)
 
         return logger
+
+    class Meta:
+        ordering = ['pk']
 
     def __str__(self):
         return self.username
@@ -109,7 +111,8 @@ class Configuration(models.Model):
 
 
 class Session(models.Model):
-    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE)
+    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE,
+                                related_name='profile_session')
     session_string = models.CharField(max_length=10000)
 
 

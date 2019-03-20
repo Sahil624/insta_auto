@@ -1,6 +1,5 @@
 from django.contrib.auth.models import User
 from django.db import models
-# Create your models here.
 from users_profile.models import UserProfile
 
 
@@ -21,6 +20,9 @@ class Media(models.Model):
     media_owner = models.CharField(max_length=300, blank=True, null=True)
     comment = models.CharField(max_length=200, blank=True, null=True)
 
+    class Meta:
+        ordering = ['-date_time']
+
     def __str__(self):
         show_string = self.media_id
         if self.media_owner:
@@ -33,6 +35,9 @@ class InteractedUser(models.Model):
     user_name = models.CharField(max_length=500)
     unfollow_count = models.IntegerField(default=0)
     last_followed_time = models.DateTimeField()
+
+    class Meta:
+        ordering = ['-pk']
 
     def __str__(self):
         return self.user_name
@@ -64,6 +69,9 @@ class BotSession(models.Model):
     comments_counter = models.IntegerField(default=0)
     bot_start_time = models.DateTimeField(blank=True, null=True)
     bot_stop_time = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-bot_creation_time']
 
     def __str__(self):
         return self.user.username + " | " + str(self.bot_creation_time)
