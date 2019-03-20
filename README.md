@@ -32,10 +32,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3 Install [Redis]('https://redis.io/') or use any Redis Cloud Service like [Redis labs]('https://redislabs.com/')
+3 Install [Redis](https://redis.io/) or use any Redis Cloud Service like [Redis labs](https://redislabs.com/)
 
-4 Install [Postgres Sql]('https://www.postgresql.org/') on your machine (Recommended) or use Postgres as a service 
-like [Elephant Sql]('https://www.elephantsql.com/')
+4 Install [Postgres Sql](https://www.postgresql.org/) on your machine (Recommended) or use Postgres as a service 
+like [Elephant Sql](https://www.elephantsql.com/)
 
 5 Make a config.py file in insta_auto folder as this :-
 
