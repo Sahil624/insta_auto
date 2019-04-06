@@ -7,8 +7,7 @@ from channels.layers import get_channel_layer
 class MediaManager:
 
     def __init__(self, bot):
-        bot.logger.debug('Initalizing media manager for ', bot.user_instance.username, 'with login status',
-                         bot.login_status)
+        bot.logger.info('Initalizing media manager')
         self.bot = bot
 
     def get_media_id_by_tag(self, tag):

@@ -65,7 +65,7 @@ class UserProfile(models.Model):
         handler.setLevel(settings.LOG_LEVEL)
 
         logger = logging.getLogger(self.username + '.logs')
-        logger.setLevel(settings.LOG_LEVELs)
+        logger.setLevel(settings.LOG_LEVEL)
         logger.addHandler(handler)
 
         return logger
@@ -113,7 +113,10 @@ class Configuration(models.Model):
 class Session(models.Model):
     user = models.OneToOneField(UserProfile, on_delete=models.CASCADE,
                                 related_name='profile_session')
-    session_string = models.CharField(max_length=10000)
+    session_object = models.BinaryField()
+
+    def __str__(self):
+        return self.user.username + '__' + str(self.id)
 
 
 class WebSocketToken(models.Model):

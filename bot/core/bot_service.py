@@ -2,6 +2,7 @@ import atexit
 import datetime
 import os
 import pickle
+import base64
 import random
 import re
 import signal
@@ -25,7 +26,7 @@ from bot.core.media_manager import MediaManager
 from bot.core.unfollow_manager import UnfollowManager
 from bot.core.user_info import UserInfo
 from bot.models import FakeUA, WhiteListedUser, BotSession
-from users_profile.models import UserProfile
+from users_profile.models import UserProfile, Session
 
 
 class InstagramBot:
@@ -134,15 +135,18 @@ class InstagramBot:
             self.session_1 = requests.Session()
             self.session_2 = requests.Session()
 
-            self.login()
             self.set_blacked_list_user_dict()
+            print('initialize Media Manager')
             self.media_manager = MediaManager(self)
+            print('Initialized media manger', self.media_manager)
             self.insta_explorer = Explorer(self)
             self.insta_explorer.populate_user_blacklist()
             self.like_manager = LikeManager(self)
             self.comment_manager = CommentManager(self)
             self.follow_manager = FollowManager(self)
             self.unfollow_manager = UnfollowManager(self)
+
+            self.login()
 
             signal.signal(signal.SIGINT, self.stop_bot)
             signal.signal(signal.SIGTERM, self.stop_bot)
@@ -181,13 +185,32 @@ class InstagramBot:
             }
         )
 
-        if self.session_file is not None and os.path.isfile(self.session_file):
-            self.logger.info(f"Found session file {self.session_file}")
-            self.send_to_socket(f"Found session file {self.session_file}")
-            logged_in = True
-            with open(self.session_file, "rb") as i:
-                cookies = pickle.load(i)
+        session_objs = Session.objects.filter(user=self.user_instance)
+        print('Sessions', session_objs, session_objs.count() > 0)
+        if session_objs.count() > 0:
+            try:
+                self.send_to_socket('Fetching session')
+                self.logger.info('Fetching session from db')
+                session_obj = session_objs.first()
+                cookies = pickle.loads(base64.decodebytes(session_obj.session_object))
                 self.session_1.cookies.update(cookies)
+                logged_in = True
+
+            except Exception as e:
+                print('Exception in Updating Cookie', str(e))
+                self.send_to_socket('Error in fetching session')
+
+        # elif self.session_file is not None and os.path.isfile(self.session_file):
+        #     try:
+        #         self.logger.info(f"Found session file {self.session_file}")
+        #         print('ses')
+        #         self.send_to_socket(f"Found session file {self.session_file}")
+        #         logged_in = True
+        #         with open(self.session_file, "rb") as i:
+        #             cookies = pickle.load(i)
+        #             self.session_1.cookies.update(cookies)
+        #     except Exception as e:
+        #         print('read ex', e)
 
         else:
             self.login_credentials = {
@@ -341,13 +364,20 @@ class InstagramBot:
                     self.login_status = True
                     log_string = f"{self.user_instance.username} login success!\n"
                     print(log_string)
-                    if self.session_file is not None:
-                        self.logger.info(f'Saving cookies to session file {self.session_file}')
-                        print(
-                            f"Saving cookies to session file {self.session_file}"
-                        )
-                        with open(self.session_file, "wb") as output:
-                            pickle.dump(self.session_1.cookies, output, pickle.HIGHEST_PROTOCOL)
+                    try:
+                        Session(user=self.user_instance, session_object=base64.encodebytes(
+                            pickle.dumps(self.session_1.cookies))).save()
+                        print('save', Session.objects.all())
+                    except Exception as e:
+                        print('Exception in Saving Sessions', str(e))
+                        self.logger.exception(str(e))
+                    # if self.session_file is not None:
+                    #     self.logger.info(f'Saving cookies to session file {self.session_file}')
+                    #     print(
+                    #         f"Saving cookies to session file {self.session_file}"
+                    #     )
+                    #     with open(self.session_file, "wb") as output:
+                    #         pickle.dump(self.session_1.cookies, output, pickle.HIGHEST_PROTOCOL)
                 else:
                     self.login_status = False
                     print("Login error! Check your login data!")
