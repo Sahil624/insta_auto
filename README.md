@@ -63,5 +63,3 @@ python manage.py migrate
 ```bash
 python manage.py runserver
 ```
-
-##### Client Side comming soon...
