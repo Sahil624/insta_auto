@@ -10,7 +10,7 @@ channels-redis==2.3.3
 chardet==3.0.4
 constantly==15.1.0
 daphne==2.2.5
-Django==2.1.5
+Django==2.2.13
 djangorestframework==3.9.1
 djangorestframework-stubs==0.2.0
 fake-useragent==0.1.11
